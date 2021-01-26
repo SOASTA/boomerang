@@ -1238,6 +1238,10 @@
 		// hero images timestamp
 		var heroImagesReady = 0;
 
+		var idleIntervals = 0;
+
+		var bucketsVisited;
+
 		// check for pre-Boomerang FPS log
 		if (BOOMR.fpsLog && BOOMR.fpsLog.length) {
 			// start at the first frame instead of now
@@ -1627,8 +1631,7 @@
 		 */
 		function analyze(timeOfLastBeacon) {
 			var endBucket = getTimeBucket(),
-			    j = 0,
-			    idleIntervals = 0;
+			    j = 0;
 
 			// add log
 			if (impl.sendLog && typeof timeOfLastBeacon !== "undefined") {
@@ -1668,7 +1671,13 @@
 			}
 
 			// determine the first bucket we'd use
-			var startBucket = Math.floor((visuallyReady - startTime) / COLLECTION_INTERVAL);
+			var startBucket;
+			if (typeof bucketsVisited === "undefined") {
+				startBucket = Math.floor((visuallyReady - startTime) / COLLECTION_INTERVAL);
+			}
+			else {
+				startBucket = bucketsVisited + 1;
+			}
 
 			for (j = startBucket; j <= endBucket; j++) {
 				if (data.longtask && data.longtask[j]) {
@@ -1708,6 +1717,7 @@
 					break;
 				}
 			}
+			bucketsVisited = endBucket;
 
 			// we were able to calculate a TTI
 			if (tti > 0) {
@@ -1788,7 +1798,14 @@
 			// clear the buckets
 			for (var type in data) {
 				if (data.hasOwnProperty(type)) {
-					data[type] = [];
+					if (!tti && bucketsVisited > 0) {
+						var oldData = data[type];
+						var newData = new Array(bucketsVisited + 1);
+						data[type] = newData.concat(oldData.slice(bucketsVisited + 1));
+					}
+					else {
+						data[type] = [];
+					}
 				}
 			}
 
