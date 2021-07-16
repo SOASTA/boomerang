@@ -5,7 +5,7 @@ describe("e2e/07-autoxhr/51-concurrent-events", function() {
 	var tf = BOOMR.plugins.TestFramework;
 	var t = BOOMR_test;
 
-	it("Should have sent 3 beacon (XMLHttpRequest !== null)", function(done) {
+	it("Should have sent 3 beacons (XMLHttpRequest !== null)", function(done) {
 		this.timeout(10000);
 		t.ifAutoXHR(
 			done,

@@ -7,6 +7,9 @@
  * This plugin also monitors DOM manipulations following a XHR to filter out
  * "background" XHRs.
  *
+ * This plugin provides the backbone for the {@link BOOMR.plugins.SPA} plugin.  Single Page App navigations
+ * use XHR and DOM monitoring to determine when the SPA navigations are complete.
+ *
  * This plugin has a corresponding {@tutorial header-snippets} that helps monitor XHRs prior to Boomerang loading.
  *
  * For information on how to include this plugin, see the {@tutorial building} tutorial.
@@ -35,9 +38,11 @@
  *
  * To enable AutoXHR, you should set {@link BOOMR.plugins.AutoXHR.init|instrument_xhr} to `true`:
  *
- *     BOOMR.init({
- *       instrument_xhr: true
- *     });
+ * ```
+ * BOOMR.init({
+ *     instrument_xhr: true
+ * });
+ * ```
  *
  * Once enabled and initialized, the `window.XMLHttpRequest` object will be
  * replaced with a "proxy" object that instruments all XHRs.
@@ -46,9 +51,11 @@
  *
  * After `AutoXHR` is enabled, any `XMLHttpRequest.send` will be monitored:
  *
- *     xhr = new XMLHttpRequest();
- *     xhr.open("GET", "/api/foo");
- *     xhr.send(null);
+ * ```
+ * xhr = new XMLHttpRequest();
+ * xhr.open("GET", "/api/foo");
+ * xhr.send(null);
+ * ```
  *
  * If this XHR triggers DOM changes, a beacon will eventually be sent.
  *
@@ -66,9 +73,40 @@
  * If you don't want this behavior, and want to measure *every* XHR on the page, you
  * can enable {@link BOOMR.plugins.AutoXHR.init|alwaysSendXhr=true}.  When set, every
  * distinct XHR will get its own XHR beacon.
+ *
+ * ```
+ * BOOMR.init({
+ *     AutoXHR: {
+ *         alwaysSendXhr: true
+ *     }
+ * });
+ * ```
+ *
  * {@link BOOMR.plugins.AutoXHR.init|alwaysSendXhr} can also be a list of strings
  * (matching URLs), regular expressions (matching URLs), or a function which returns
  * true for URLs to always send XHRs for.
+ *
+ * ```
+ * BOOMR.init({
+ *     AutoXHR: {
+ *         alwaysSendXhr: [
+ *             "domain.com",
+ *             /regexmatch/,
+ *         ]
+ *    }
+ * });
+ *
+ * // or
+ *
+ * BOOMR.init({
+ *     AutoXHR: {
+ *         alwaysSendXhr: function(url) {
+ *             return url.indexOf("domain.com") !== -1;
+ *         }
+ *    }
+ * });
+ * ```
+ *
  *
  * ### Compatibility and Browser Support
  *
@@ -85,14 +123,17 @@
  * We will not use MutationObserver in IE 11 due to several browser bugs.
  * See {@link BOOMR.utils.isMutationObserverSupported} for details.
  *
- * ## Excluding Certain Requests From Instrumentation
+ * ## Excluding Certain Requests or DOM Elements From Instrumentation
  *
- * Whenever Boomerang intercepts an `XMLHttpRequest`, it will check if that request
+ * Whenever Boomerang intercepts an `XMLHttpRequest` (or Fetch), it will check if that request
  * matches anything in the XHR exclude list. If it does, Boomerang will not
  * instrument, time, send a beacon for that request, or include it in the
  * {@link BOOMR.plugins.SPA} calculations.
  *
- * The XHR exclude list is defined by creating an `BOOMR.xhr_excludes` map, and
+ * There are two methods of excluding XHRs: Defining the `BOOMR.xhr_excludes` array,
+ * or using the {@link BOOMR.plugins.AutoXHR.init|excludeFilters} option.
+ *
+ * The `BOOMR.xhr_excludes` XHR excludes list is defined by creating a map, and
  * adding URL parts that you would like to exclude from instrumentation. You
  * can put any of the following in `BOOMR.xhr_excludes`:
  *
@@ -113,6 +154,37 @@
  * };
  * ```
  *
+ * The {@link BOOMR.plugins.AutoXHR.init|excludeFilters} gives you more control by allowing you
+ * to specify one or more callbacks that will be run for each XHR/Fetch.  If any callback
+ * returns `true`, the XHR/Fetch will *not* be instrumented.
+ *
+ * ```
+ * BOOMR.init({
+ *   AutoXHR: {
+ *     excludeFilters: [
+ *       function(anchor) {
+ *         return anchor.href.match(/non-trackable/);
+ *       }
+ *     ]
+ *   }
+ * });
+ * ```
+ *
+ * Finally, the {@link BOOMR.plugins.AutoXHR.init|domExcludeFilters} DOM filters can be used to filter out
+ * specific DOM elements from being tracked (marked as "uninteresting").
+ *
+ * ```
+ * BOOMR.init({
+ *   AutoXHR: {
+ *     domExcludeFilters: [
+ *       function(elem) {
+ *         return elem.id === "ignore";
+ *       }
+ *     ]
+ *   }
+ * });
+ * ```
+ *
  * ## Beacon Parameters
  *
  * XHR beacons have different parameters in general than Page Load beacons.
@@ -125,20 +197,25 @@
  *
  * ## Interesting Nodes
  *
- * MutationObserver is used to detect "interesting" nodes. Interesting nodes are
+ * A `MutationObserver` is used to detect "interesting" nodes. Interesting nodes are
  * new IMG/IMAGE/IFRAME/LINK (rel=stylesheet) nodes or existing nodes that are
  * changing their source URL.
+ *
  * We consider the following "uninteresting" nodes:
  *   - Nodes that have either a width or height <= 1px.
+ *   - Nodes with either a width or height of 0px.
  *   - Nodes that have display:none.
  *   - Nodes that have visibility:hidden.
+ *   - Nodes with an opacity:0.
  *   - Nodes that update their source URL to the same value.
  *   - Nodes that have a blank source URL.
+ *   - Images with a loading="lazy" attribute
  *   - Nodes that have a source URL starting with `about:`, `javascript:` or `data:`.
  *   - SCRIPT nodes because there is no consistent way to detect when they have loaded.
  *   - Existing IFRAME nodes that are changing their source URL because is no consistent
  *     way to detect when they have loaded.
  *   - Nodes that have a source URL that matches a AutoXHR exclude filter rule.
+ *   - Nodes that have been manually excluded
  *
  * ## Algorithm
  *
@@ -183,6 +260,14 @@
  *   - We do not know if the developer's event listener has already run before
  *     ours or if it will run in the future or even if they do have an event listener.
  *   - Our best bet is the same as 0.1 above.
+ *
+ * - `0.3` SPA soft route change from a click that triggers a XHR before the state is
+ *    changed (when {@link BOOMR.plugins.AutoXHR.init|spaStartFromClick} is enabled).
+ *
+ *   - We store the time of the click
+ *   - If any additional XHRs come next, we track those
+ *   - When a pushState comes after the XHRs (before the timeout), we will "migrate" the
+ *     click to a SPA event
  *
  * - `1` Click initiated (Only available when no SPA plugins are enabled)
  *
@@ -298,7 +383,6 @@
 	 * @default
 	 */
 	var CLICK_XHR_TIMEOUT = 50;
-
 
 	/**
 	 * Fetch events that don't read the body of the response get an extra wait time before
@@ -576,7 +660,8 @@
 			resource: resource,
 			nodes_to_wait: 0,  // MO resources + xhrs currently outstanding + wait filter (max: 1)
 			total_nodes: 0,  // total MO resources + xhrs + wait filter (max: 1)
-			resources: [],  // resources reported to MO handler (no xhrs)
+			resources: [],  // resources reported by MO handler (no xhrs)
+			xhr_resources: [],  // resources reported by xhr monitoring (for debugging only)
 			complete: false,
 			aborted: false,  // this event was aborted
 			firedEarlyBeacon: false
@@ -596,7 +681,55 @@
 		}
 
 		if (last_ev) {
-			if (last_ev.type === "click") {
+			if (last_ev.type === "click" &&
+			    impl.singlePageApp &&
+			    impl.spaStartFromClick &&
+			    ev.type === "xhr") {
+				// spaStartFromClick active, we had a click, and this is an XHR
+
+				// mark that this XHR came from a click event
+				ev.resource.fromClick = true;
+
+				// transition XHR start time from the click
+				ev.resource.timing.click = last_ev.resource.timing.requestStart;
+				ev.resource.timing.requestStart = last_ev.resource.timing.requestStart;
+
+				ev.interesting = last_ev.interesting || 0;
+				ev.total_nodes += last_ev.total_nodes;
+				ev.resources = last_ev.resources.concat(ev.resources);
+				ev.xhr_resources = last_ev.xhr_resources.concat(ev.xhr_resources);
+
+				// stop the click event
+				this.pending_events[last_ev_index] = undefined;
+				this.watch--;
+			}
+			else if ((last_ev.type === "click" || last_ev.resource.fromClick) &&
+			         impl.singlePageApp &&
+			         impl.spaStartFromClick &&
+			         ev.type === "spa") {
+				// spaStartFromClick active, we have a click (or XHR from click) active,
+				// and this is a SPA
+
+				// transition all XHR times
+				ev.resource.timing = last_ev.resource.timing;
+
+				ev.interesting = last_ev.interesting || 0;
+				ev.total_nodes += last_ev.total_nodes;
+				ev.resources = last_ev.resources.concat(ev.resources);
+
+				// add previous XHR URL
+				if (last_ev.resource.url) {
+					ev.xhr_resources.push(last_ev.resource.url);
+				}
+
+				// add any other XHRs tracked in the previous
+				ev.xhr_resources = ev.xhr_resources.concat(last_ev.xhr_resources);
+
+				// stop the previous event
+				this.pending_events[last_ev_index] = undefined;
+				this.watch--;
+			}
+			else if (last_ev.type === "click") {
 				// 3.1 & 3.3
 				if (last_ev.nodes_to_wait === 0 || !last_ev.resource.url) {
 					this.pending_events[last_ev_index] = undefined;
@@ -720,8 +853,6 @@
 
 			this.watch--;
 
-			ev.resource.resources = ev.resources;
-
 			// for SPA events, the resource's URL may be set to the previous navigation's URL.
 			// reset it to the current document URL
 			if (BOOMR.utils.inArray(ev.type, BOOMR.constants.BEACON_TYPE_SPAS)) {
@@ -733,6 +864,31 @@
 			if (ev.type === "spa" && ev.total_nodes === 0 && ev.resource.url === self.lastSpaLocation) {
 				debugLog("SPA beacon cancelled, no URL change or resources triggered");
 				BOOMR.fireEvent("spa_cancel");
+				this.pending_events[index] = undefined;
+				return;
+			}
+
+			// if click event did not trigger additional resources or doesn't have
+			// a url then do not send a beacon
+			if (ev.type === "click" && (ev.total_nodes === 0 || !ev.resource.url)) {
+				debugLog("Click beacon cancelled, no resources triggered or no resource URL");
+				this.pending_events[index] = undefined;
+				return;
+			}
+
+			// when in spaStartFromClick mode, if we're tracking clicks, transition them to an 'xhr' event
+			if (ev.type === "click" && impl.singlePageApp && impl.spaStartFromClick) {
+				ev.type = ev.resource.initiator = "xhr";
+			}
+
+			// if this was a XHR that did not trigger additional resources then we will not send a beacon,
+			// note that XHRs start out with total_nodes=1 to account for itself
+			if (impl.xhrRequireChanges &&
+			    ev.type === "xhr" &&
+			    ev.total_nodes === 1 &&
+			    (typeof ev.interesting === "undefined" || ev.interesting === 0) &&
+			    !matchesAlwaysSendXhr(ev.resource.url, impl.alwaysSendXhr)) {
+				debugLog("XHR beacon cancelled, no resources triggered");
 				this.pending_events[index] = undefined;
 				return;
 			}
@@ -807,12 +963,12 @@
 			    BOOMR.plugins.ResourceTiming.is_enabled() &&
 			    resource.timing &&
 			    resource.timing.requestStart) {
-				var r = BOOMR.plugins.ResourceTiming.getCompressedResourceTiming(
-						resource.timing.requestStart,
-						resource.timing.loadEventEnd
-					);
 
-				BOOMR.plugins.ResourceTiming.addToBeacon(r);
+				// Save resourceTiming data onto beacon as it may not go out right away
+				resource.restiming = BOOMR.plugins.ResourceTiming.getCompressedResourceTiming(
+					resource.timing.requestStart,
+					resource.timing.loadEventEnd
+				);
 			}
 
 			// For SPAs, calculate Back-End and Front-End timings
@@ -999,23 +1155,11 @@
 			if (BOOMR.utils.inArray(ev.type, BOOMR.constants.BEACON_TYPE_SPAS) && !BOOMR.hasBrowserOnloadFired()) {
 				// browser onload hasn't fired yet, lets wait because there might be more interesting
 				// things on the way
-				this.setTimeout(SPA_TIMEOUT, index);
+				this.setTimeout(impl.spaIdleTimeout, index);
 				return;
 			}
 
 			if (ev.nodes_to_wait === 0) {
-				// TODO, if xhr event did not trigger additional resources then do not
-				// send a beacon unless it matches alwaysSendXhr. See !868
-
-				// if click event did not trigger additional resources or doesn't have
-				// a url then do not send a beacon
-				if (ev.type === "click" && (ev.total_nodes === 0 || !ev.resource.url)) {
-					this.watch--;
-					this.pending_events[index] = undefined;
-
-					return;
-				}
-
 				// send event if there are no outstanding downloads
 				this.sendEvent(index);
 			}
@@ -1156,6 +1300,7 @@
 								return;
 							}
 							current_event.firedEarlyBeacon = true;
+							debugLog("Triggering an early beacon");
 							BOOMR.plugins.Early.sendEarlyBeacon(current_event.resource, current_event.type);
 						}, SPA_EARLY_TIMEOUT);  // give the SPA framework a bit of time to load the resource
 					}
@@ -1242,6 +1387,10 @@
 					// placeholder IMG
 					return false;
 				}
+				else if (node.loading === "lazy") {
+					// lazy loading - we can't know when this request will be triggered
+					return false;
+				}
 			}
 
 			// IFRAMEs whose SRC has changed will not fire a load event again
@@ -1275,21 +1424,36 @@
 			if (isNaN(domWidth)) {
 				domWidth = (node.style &&
 				   (node.style.width === "0" ||
-					node.style.width === "0px" ||
-					node.style.width === "1px")) ? 0 : undefined;
+				    node.style.width === "0px" ||
+				    node.style.width === "1px")) ? 0 : undefined;
 			}
 
-			if (!isNaN(domHeight) && domHeight <= 1 && !isNaN(domWidth) && domWidth <= 1) {
+			// Skip anything where *both* dimensions are 1px or less
+			if (!isNaN(domHeight) &&
+			    domHeight <= 1 &&
+			    !isNaN(domWidth) &&
+			    domWidth <= 1) {
 				return false;
 			}
 
-			// Check against display:none
-			if (node.style && node.style.display === "none") {
+			// Skip anything where *either* dimension is 0px
+			if (domHeight === 0 || domWidth === 0) {
 				return false;
 			}
 
-			// Check against visibility:hidden
-			if (node.style && node.style.visibility === "hidden") {
+			// Check against display:none, visibility:hidden, opacity: 0
+			if (node.style && (
+			    (node.style.display === "none") ||
+			    (node.style.visibility === "hidden") ||
+			    (node.style.opacity === "0"))) {
+				return false;
+			}
+
+			// Run any final customer-defined DOM exclusions
+			if (impl.domExcludeFilter(node)) {
+				debugLog("Exclude for DOM element matched, not monitoring");
+
+				// excluded resource, so abort
 				return false;
 			}
 
@@ -1317,7 +1481,7 @@
 			if (!current_event.resource.url) {
 				a.href = url;
 
-				if (impl.excludeFilter(a)) {
+				if (impl.xhrExcludeFilter(a)) {
 					debugLog("Exclude for " + a.href + " matched. Excluding");
 					// excluded resource, so abort
 					return false;
@@ -1414,6 +1578,7 @@
 		}
 
 		debugLog("Monitoring " + resource.type +  " URL: " + resource.url + " for event id: " + index);
+		current_event.xhr_resources.push(resource.url);  // for debugging
 
 		// increase the number of outstanding resources by one
 		current_event.nodes_to_wait++;
@@ -1590,7 +1755,7 @@
 	function instrumentClick() {
 		// Capture clicks and wait 50ms to see if they result in DOM mutations
 		BOOMR.subscribe("click", function() {
-			if (impl.singlePageApp) {
+			if (impl.singlePageApp && !impl.spaStartFromClick) {
 				// In a SPA scenario, only route changes (or events from the SPA
 				// framework) trigger an interesting event.
 				return;
@@ -1731,7 +1896,7 @@
 			}
 
 			a.href = url;
-			if (impl.excludeFilter(a)) {
+			if (impl.xhrExcludeFilter(a)) {
 				// this fetch should be excluded from instrumentation
 				BOOMR.debug("Exclude found for resource: " + a.href + " Skipping Fetch instrumentation!", "AutoXHR");
 				// call the original open method
@@ -1751,7 +1916,10 @@
 			handler.addEvent(resource);
 
 			try {
-				resource.timing.requestStart = BOOMR.now();
+				if (!resource.timing.requestStart) {
+					resource.timing.requestStart = BOOMR.now();
+				}
+
 				var promise = BOOMR.orig_fetch.apply(this, arguments);
 
 				/**
@@ -2047,7 +2215,7 @@
 			req.open = function(method, url, async) {
 				a.href = url;
 
-				if (impl.excludeFilter(a)) {
+				if (impl.xhrExcludeFilter(a)) {
 					// this xhr should be excluded from instrumentation
 					excluded = true;
 					debugLog("Exclude found for resource: " + a.href + " Skipping XHR instrumentation!");
@@ -2229,7 +2397,10 @@
 
 				handler.addEvent(resource);
 
-				resource.timing.requestStart = BOOMR.now();
+				if (!resource.timing.requestStart) {
+					resource.timing.requestStart = BOOMR.now();
+				}
+
 				// call the original send method unless there was an error
 				// during .open
 				if (typeof resource.status === "undefined" ||
@@ -2277,41 +2448,47 @@
 	}
 
 	/**
-	 * Container for AutoXHR plugin Closure specific state configuration data
+	 * Container for AutoXHR plugin state
 	 *
 	 * @property {string[]} spaBackendResources Default resources to count as Back-End during a SPA nav
-	 * @property {FilterObject[]} filters Array of {@link FilterObject} that is used to apply filters on XHR Requests
-	 * @property {boolean} initialized Set to true after the first run of
+	 * @property {XhrFilterObject[]} xhrExcludeFilters Array of {@link XhrFilterObject} that is used to apply filters on XHR Requests
+	 * @property {DomFilterObject[]} domExcludeFilters Array of {@link DomFilterObject} that is used to apply filters on DOM elements
+	 * @property {boolean} initialized Set to true after initialization
+	 *
 	 * {@link BOOMR.plugins.AutoXHR#init}
 	 */
 	impl = {
 		spaBackEndResources: SPA_RESOURCES_BACK_END,
 		alwaysSendXhr: false,
-		excludeFilters: [],
+		xhrExcludeFilters: [],
+		domExcludeFilters: [],
 		initialized: false,
 		captureXhrRequestResponse: false,
 		singlePageApp: false,
+		spaStartFromClick: false,
 		autoXhrEnabled: false,
 		monitorFetch: false,  // new feature, off by default
 		fetchBodyUsedWait: FETCH_BODY_USED_WAIT_DEFAULT,
 		spaIdleTimeout: SPA_TIMEOUT,
 		xhrIdleTimeout: CLICK_XHR_TIMEOUT,
+		xhrRequireChanges: true,
 
 		/**
-		 * Filter function iterating over all available {@link FilterObject}s if
-		 * returns true will not instrument an XHR
+		 * Filter function iterating over all available {@link XhrFilterObject}s.
+		 *
+		 * If any filter returns true, the XHR will *not* be instrumented.
 		 *
 		 * @param {HTMLAnchorElement} anchor - HTMLAnchorElement node created with
-		 * the XHRs URL as `href` to evaluate by {@link FilterObject}s and passed
-		 * to {@link FilterObject#cb} callbacks.
+		 * the XHRs URL as `href` to evaluate by {@link XhrFilterObject}s and passed
+		 * to {@link XhrFilterObject#cb} callbacks.
 		 *
 		 * NOTE: The anchor needs to be created from the host document
 		 * (ie. `BOOMR.window.document`) to enable us to resolve relative URLs to
 		 * a full valid path and BASE HREF mechanics can take effect.
 		 *
-		 * @return {boolean} true if the XHR should not be instrumented false if it should be instrumented
+		 * @return {boolean} True if the XHR should not be instrumented.
 		 */
-		excludeFilter: function(anchor) {
+		xhrExcludeFilter: function(anchor) {
 			var idx, ret, ctx;
 
 			// If anchor is null we just throw it out period
@@ -2319,19 +2496,16 @@
 				return false;
 			}
 
-			for (idx = 0; idx < impl.excludeFilters.length; idx++) {
-				if (typeof impl.excludeFilters[idx].cb === "function") {
-					ctx = impl.excludeFilters[idx].ctx;
-					if (impl.excludeFilters[idx].name) {
-						debugLog("Running filter: " + impl.excludeFilters[idx].name + " on URL: " + anchor.href);
-					}
+			for (idx = 0; idx < impl.xhrExcludeFilters.length; idx++) {
+				if (typeof impl.xhrExcludeFilters[idx].cb === "function") {
+					ctx = impl.xhrExcludeFilters[idx].ctx;
 
 					try {
-						ret = impl.excludeFilters[idx].cb.call(ctx, anchor);
+						ret = impl.xhrExcludeFilters[idx].cb.call(ctx, anchor);
 						if (ret) {
 							/* BEGIN_DEBUG */
-							debugLog("Found matching filter at: " +
-								impl.excludeFilters[idx].name + " for URL: " +
+							debugLog("XHR exclude filter " +
+								impl.xhrExcludeFilters[idx].name + " matched for URL: " +
 								anchor.href);
 							/* END_DEBUG */
 
@@ -2339,10 +2513,52 @@
 						}
 					}
 					catch (exception) {
-						BOOMR.addError(exception, "BOOMR.plugins.AutoXHR.impl.excludeFilter()");
+						BOOMR.addError(exception, "BOOMR.plugins.AutoXHR.impl.xhrExcludeFilter()");
 					}
 				}
 			}
+			return false;
+		},
+
+		/**
+		 * Filter function iterating over all available {@link DomFilterObject}s.
+		 *
+		 * @param {HTMLElement} elem - HTMLElement to review for instrumentation.
+		 *
+		 * If any filter returns true, the DOM element will *not* be instrumented.
+		 *
+		 * @return {boolean} True if the DOM element should not be instrumented.
+		 */
+		domExcludeFilter: function(elem) {
+			var idx, ret, ctx;
+
+			for (idx = 0; idx < impl.domExcludeFilters.length; idx++) {
+				if (typeof impl.domExcludeFilters[idx].cb === "function") {
+					ctx = impl.domExcludeFilters[idx].ctx;
+
+					if (impl.domExcludeFilters[idx].name) {
+						debugLog("Running DOM filter: " + impl.domExcludeFilters[idx].name);
+					}
+
+					try {
+						ret = impl.domExcludeFilters[idx].cb.call(ctx, elem);
+						if (ret) {
+							/* BEGIN_DEBUG */
+							debugLog("Found matching DOM filter at: " +
+								impl.domExcludeFilters[idx].name);
+							/* END_DEBUG */
+
+							return true;
+						}
+					}
+					catch (exception) {
+						BOOMR.addError(exception, "BOOMR.plugins.AutoXHR.impl.domExcludeFilter()");
+					}
+				}
+			}
+
+			debugLog("XHR exclude filters did not match for URL: " + elem.href);
+
 			return false;
 		},
 
@@ -2416,8 +2632,10 @@
 							resource.timing.loadEventEnd = entryResponseEnd;
 						}
 
-						// use the startTime from ResourceTiming instead
-						resource.timing.requestStart = entryStartTime;
+						// use the startTime from ResourceTiming instead (if not already set from Click)
+						if (!resource.fromClick || !resource.timing.requestStart) {
+							resource.timing.requestStart = entryStartTime;
+						}
 
 						// also track it as the fetchStart time
 						resource.timing.fetchStart = entryStartTime;
@@ -2467,12 +2685,20 @@
 		 * @param {string[]} [config.AutoXHR.spaBackEndResources] Default resources to count as
 		 * Back-End during a SPA nav
 		 * @param {boolean} [config.AutoXHR.monitorFetch] Whether or not to instrument fetch()
-		 * @param {number} [config.AuthXHR.fetchBodyUsedWait] If the fetch response's bodyUsed flag is false,
+		 * @param {number} [config.AutoXHR.fetchBodyUsedWait] If the fetch response's bodyUsed flag is false,
 		 * we'll wait this amount of ms before checking RT for an entry. Setting to 0 will disable this feature
-		 * @param {boolean} [config.AutoXHR.alwaysSendXhr] Whether or not to send XHR
+		 * @param {boolean|string[]|RegExp[]|function[]} [config.AutoXHR.alwaysSendXhr] Whether or not to send XHR
 		 * beacons for every XHR.
 		 * @param {boolean} [config.captureXhrRequestResponse] Whether or not to capture an XHR's
 		 * request and response bodies on for the {@link event:BOOMR#xhr_load xhr_load} event.
+		 * @param {number} [config.AutoXHR.spaIdleTimeout=1000] Timeout for Single Page Applications after the final
+		 * resource fetch has completed before calling the SPA navigation complete. Default is 1000ms.
+		 * @param {number} [config.AutoXHR.xhrIdleTimeout=50] Timeout for XHRs after final resource fetch has completed
+		 * before calling the XHR complete.  Default is 50ms.
+		 * @param {boolean} [config.AutoXHR.xhrRequireChanges=true] Whether or not a XHR beacon will only be triggered
+		 * if there were DOM changes.
+		 * @param {boolean} [config.AutoXHR.spaStartFromClick=false] In Single Page Apps, start tracking
+		 * the SPA Soft Navigation from any preceeding clicks.  If false, will start from the most recent pushState.
 		 *
 		 * @returns {@link BOOMR.plugins.AutoXHR} The AutoXHR plugin for chaining
 		 * @memberof BOOMR.plugins.AutoXHR
@@ -2492,7 +2718,7 @@
 			// gather config and config overrides
 			BOOMR.utils.pluginConfig(impl, config, "AutoXHR",
 			    ["spaBackEndResources", "alwaysSendXhr", "monitorFetch", "fetchBodyUsedWait",
-			    "spaIdleTimeout", "xhrIdleTimeout"]);
+			    "spaIdleTimeout", "xhrIdleTimeout", "xhrRequireChanges", "spaStartFromClick"]);
 
 			BOOMR.instrumentXHR = instrumentXHR;
 			BOOMR.uninstrumentXHR = uninstrumentXHR;
@@ -2506,10 +2732,39 @@
 				impl.initialized = true;
 			}
 
-			// Add filters from config
+			//
+			// Add XHR filters from config
+			// NOTE via config it's just called 'excudeFilters' (for compat), while in the code it's always
+			// 'xhrExcludeFilters' to differentiate itself from domExcludeFilters
+			//
 			if (config && config.AutoXHR && config.AutoXHR.excludeFilters && config.AutoXHR.excludeFilters.length > 0) {
 				for (idx = 0; idx < config.AutoXHR.excludeFilters.length; idx++) {
-					impl.excludeFilters.push(config.AutoXHR.excludeFilters[idx]);
+					if (typeof config.AutoXHR.excludeFilters[idx] === "function") {
+						impl.xhrExcludeFilters.push({
+							cb: config.AutoXHR.excludeFilters[idx],
+							ctx: this,
+							name: "unknown XHR filter"
+						});
+					}
+					else {
+						impl.xhrExcludeFilters.push(config.AutoXHR.excludeFilters[idx]);
+					}
+				}
+			}
+
+			// Add DOM filters from config
+			if (config && config.AutoXHR && config.AutoXHR.domExcludeFilters && config.AutoXHR.domExcludeFilters.length > 0) {
+				for (idx = 0; idx < config.AutoXHR.domExcludeFilters.length; idx++) {
+					if (typeof config.AutoXHR.domExcludeFilters[idx] === "function") {
+						impl.domExcludeFilters.push({
+							cb: config.AutoXHR.domExcludeFilters[idx],
+							ctx: this,
+							name: "unknown DOM filter"
+						});
+					}
+					else {
+						impl.domExcludeFilters.push(config.AutoXHR.domExcludeFilters[idx]);
+					}
 				}
 			}
 
@@ -2596,12 +2851,12 @@
 		/**
 		 * A callback with a HTML element.
 		 * @callback htmlElementCallback
-		 * @param {HTMLAnchorElement} elem HTML a element
+		 * @param {HTMLAnchorElement} elem HTML element
 		 * @memberof BOOMR.plugins.AutoXHR
 		 */
 
 		/**
-		 * Add a filter function to the list of functions to run to validate if an
+		 * Add a XHR filter function to the list of functions to run to validate if an
 		 * XHR should be instrumented.
 		 *
 		 * @example
@@ -2621,7 +2876,25 @@
 		 * @memberof BOOMR.plugins.AutoXHR
 		 */
 		addExcludeFilter: function(cb, ctx, name) {
-			impl.excludeFilters.push({cb: cb, ctx: ctx, name: name});
+			impl.xhrExcludeFilters.push({cb: cb, ctx: ctx, name: name});
+		},
+
+		/**
+		 * Add a DOM filter function to the list of functions to run to validate if an
+		 * DOM element should be instrumented.
+		 *
+		 * @example
+		 * BOOMR.plugins.AutoXHR.addDomExcludeFilter(function(elem) {
+		 *   return elem.id === "ignore";
+		 * }, null, "exampleFilter");
+		 * @param {BOOMR.plugins.AutoXHR.htmlElementCallback} cb Callback to run to validate filtering of an XHR Request
+		 * @param {Object} ctx Context to run {@param cb} in
+		 * @param {string} [name] Optional name for the filter, called out when running exclude filters for debugging purposes
+		 *
+		 * @memberof BOOMR.plugins.AutoXHR
+		 */
+		addDomExcludeFilter: function(cb, ctx, name) {
+			impl.domExcludeFilters.push({cb: cb, ctx: ctx, name: name});
 		},
 
 		/**
@@ -2688,14 +2961,26 @@
 	 */
 
 	/**
-	 * Filter object with data on the callback, context and name.
+	 * XHR filter object with data on the callback, context and name.
 	 *
-	 * @typedef FilterObject
+	 * @typedef XhrFilterObject
 	 *
 	 * @property {BOOMR.plugins.AutoXHR.htmlElementCallback} cb Callback
 	 * @property {Object} ctx Execution context to use when running `cb`
-	 * @property {string} [name] Name of the filter used for logging and debugging purposes (This is an entirely optional property)
+	 * @property {string} [name] Name of the filter used for logging and debugging purposes
 	 *
 	 * @memberof BOOMR.plugins.AutoXHR
 	 */
+
+	 /**
+ 	 * DOM filter object with data on the callback, context and name.
+ 	 *
+ 	 * @typedef DomFilterObject
+ 	 *
+ 	 * @property {BOOMR.plugins.AutoXHR.htmlElementCallback} cb Callback
+ 	 * @property {Object} ctx Execution context to use when running `cb`
+ 	 * @property {string} [name] Name of the filter used for logging and debugging purposes
+ 	 *
+ 	 * @memberof BOOMR.plugins.AutoXHR
+ 	 */
 })();

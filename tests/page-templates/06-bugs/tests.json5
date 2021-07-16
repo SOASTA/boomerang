@@ -1,0 +1,20 @@
+{
+    "101515-00": {
+        requires: ["auto-xhr", "restiming"]
+    },
+    "101515-01": {
+        requires: ["auto-xhr", "restiming"]
+    },
+    "104197": {
+        requires: ["third-party-analytics", "restiming"]
+    },
+    "104197-akamai": {
+        requires: ["third-party-analytics", "restiming"]
+    },
+    "106359": {
+        requires: ["auto-xhr"]
+    },
+    "issue-606": {
+        requires: ["restiming"]
+    }
+}

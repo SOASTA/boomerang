@@ -1,5 +1,38 @@
 # Boomerang Release Notes
 
+## 1.737.0 (Apr 16, 2021)
+
+### New Features
+
+* AutoXHR: Allow SPA to start from clicks
+* SPA: Option to apply Wait Filter for Hard Navs
+* AutoXHR: Ignore `opacity:0`, 0px-dimension DOM elements, custom filters
+* Build: Support for build flavors
+
+### Bug Fixes
+
+* Unblock Early beacon during missed SPA Hard Nav
+* Boomerang: Always ensure Session Length is at least 1
+
+### Documentation
+
+* Doc: Loader Snippet Known Issues and other JSDoc changes
+
+## 1.725.0 (November 3, 2020)
+### Breaking Changes
+
+* Boomerang will no longer send an "XHR Beacon" when an `XMLHttpRequest` **does not** result in any interesting DOM modifications (i.e. no  new images, stylesheets, IFRAMEs or other XHRs were added).  This change can be reverted to the previous behavior (of still sending an XHR Beacon) by setting the `AutoXHR.xhrRequireChanges=false` flag.
+
+### Bug Fixes
+
+* AutoXHR: Don't send XHR beacons if there were no DOM mutations
+* AutoXHR: Don't wait on lazy-loaded images
+* AutoXHR: For XHR beacons that happen before Page Load, ResourceTiming data is properly added to the XHR beacon when it is fired
+* Continuity: Only add Time To Visually Ready (TTVR) to the Page Load beacon
+* Errors: Avoid loop in Memory plugin for some pages
+* EventTiming: Observe entries from top-level frame (e.g. for First Input Delay)
+* ResourceTiming: Include the Boomerang and Config URL (for mPulse)
+
 ## 1.720.0 (July 29, 2020)
 ### Bug Fixes
 

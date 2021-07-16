@@ -61,6 +61,21 @@
 	}
 
 	/**
+	 * This flag protects us from a hard loop/blocking the browser
+	 * when we get an exception when calling BOOMR.utils.arrayFilter()
+	 * from the Memory plugin and we send an error beacon after onload.
+	 *
+	 * Why we get a hard loop?
+	 *
+	 * When we send an error beacon then Boomerang will call
+	 * the done() function from the Memory plugin. If at some line
+	 * in the done() function we get an error then an error beacon will
+	 * be sent again and we will fall in to a hard loop.
+	 *
+	 */
+	var hasTriggeredArrayFilterError = false;
+
+	/**
 	 * Count elements of a given type and return the count or an object with the
 	 * `key` mapped to the `count` if a `key` is specified. If one or more filters
 	 * are included, apply them incrementally to the `element` array, assigning
@@ -118,7 +133,10 @@
 						}
 					}
 					catch (err) {
-						BOOMR.addError(err, "Memory.nodeList." + type + ".filter[" + (i - 2) + "]");
+						if (!hasTriggeredArrayFilterError) {
+							hasTriggeredArrayFilterError = true;
+							BOOMR.addError(err, "Memory.nodeList." + type + ".filter[" + (i - 2) + "]");
+						}
 					}
 				}
 

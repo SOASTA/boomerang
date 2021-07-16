@@ -1,0 +1,45 @@
+<%= header %>
+<script src="52-alwayssendxhr.js" type="text/javascript"></script>
+<%= boomerangScript %>
+<script>
+BOOMR_test.init({
+	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 3 : 1,
+	instrument_xhr: true,
+	AutoXHR: {
+		alwaysSendXhr: function(url) {
+			return url.indexOf("?always") !== -1;
+		}
+	},
+	afterFirstBeacon:
+		function() {
+			if (!BOOMR.plugins.AutoXHR) {
+				return;
+			}
+
+			// should not send a beacon because we don't modify the DOM and it's not part of alwaysSendXhr
+			xhr = new XMLHttpRequest();
+			xhr.open("GET", "support/script200.js?not-always-no-dom&rnd=" + Math.random());
+			xhr.send(null);
+
+			setTimeout(function() {
+				// should send a beacon because even though we don't modify the DOM, it is part of alwaysSendXhr
+				xhr = new XMLHttpRequest();
+				xhr.open("GET", "support/script200.js?always&rnd=" + Math.random());
+				xhr.send(null);
+
+				setTimeout(function() {
+					// should send a beacon because we modify the DOM
+					xhr = new XMLHttpRequest();
+					xhr.open("GET", "support/script200.js?not-always-with-dom&rnd=" + Math.random());
+					xhr.addEventListener("load", function() {
+						var img = window.document.createElement("img");
+						img.src = "/assets/img.jpg?rnd=" + Math.random();
+						window.document.body.appendChild(img);
+					});
+					xhr.send(null);
+				}, 1000);
+			}, 1000);
+		}
+});
+</script>
+<%= footer %>

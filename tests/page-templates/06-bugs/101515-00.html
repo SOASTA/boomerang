@@ -21,6 +21,9 @@ BOOMR.fireEvent("visibility_changed");
 setTimeout(function() {
 	BOOMR_test.init({
 		testAfterOnBeacon: 2,
+		AutoXHR: {
+			xhrRequireChanges: false
+		},
 		ResourceTiming: {
 			enabled: true
 		},

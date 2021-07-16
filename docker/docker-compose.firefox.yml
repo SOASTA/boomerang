@@ -1,0 +1,20 @@
+version: '3'
+
+services: 
+  firefox:
+    image: selenium/node-firefox
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=selenium-hub
+      - HUB_PORT_4444_TCP_PORT=4444
+      - SCREEN_WIDTH=1024
+      - SCREEN_HEIGHT=768
+      - START_XVFB=false
+    # ports:
+    #   - 5901:5900
+    volumes:
+      - /dev/shm:/dev/shm  # See https://github.com/SeleniumHQ/docker-selenium & https://bugzilla.mozilla.org/show_bug.cgi?id=1338771#c10
+    #shm_size: 2g
+    depends_on:
+      - selenium-hub
+    networks:
+      - boomerang

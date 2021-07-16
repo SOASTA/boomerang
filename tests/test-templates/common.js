@@ -25,12 +25,18 @@ describe("common", function() {
 		};
 	}
 
+	/**
+	 * Validates an page load beacon
+	 */
 	function testPageLoadBeacon(b, prefix) {
 		// TODO
 		assert.isUndefined(b.pgu, prefix + "does not have the pgu param");
 		assert.isUndefined(b["xhr.pg"], prefix + "does not have the xhr.pg param");
 	}
 
+	/**
+	 * Validates an spa_hard beacon
+	 */
 	function testSpaHardBeacon(b, prefix) {
 		assert.isUndefined(b.api, prefix + "does not have the api param");
 		assert.isUndefined(b["xhr.pg"], prefix + "does not have the xhr.pg param");
@@ -40,23 +46,237 @@ describe("common", function() {
 		}
 	}
 
+	/**
+	 * Validates an spa soft beacon
+	 */
 	function testSpaSoftBeacon(b, prefix) {
-		assert.isUndefined(b.api, prefix + "does not have the api param");
-		assert.isUndefined(b["xhr.pg"], prefix + "does not have the xhr.pg param");
+		var fieldsUndefined = [
+			"api",
+			"xhr.pg",
+			"nt_nav_st",
+			"nt_fet_st",
+			"nt_dns_st",
+			"nt_dns_end",
+			"nt_con_st",
+			"nt_con_end",
+			"nt_req_st",
+			"nt_res_st",
+			"nt_res_end",
+			"nt_domloading",
+			"nt_domint",
+			"nt_domcontloaded_st",
+			"nt_domcontloaded_end",
+			"nt_domcomp",
+			"nt_load_st",
+			"nt_load_end",
+			"nt_unload_st",
+			"nt_unload_end",
+			"nt_enc_size",
+			"nt_dec_size",
+			"nt_trn_size",
+			"nt_protocol",
+			"nt_first_paint",
+			"nt_red_cnt",
+			"nt_nav_type"
+		],
+		field;
+
 		if (!t.doNotTestSpaAbort) {
 			assert.isUndefined(b["rt.abld"], prefix + "does not have the rt.abld param");
 			assert.isUndefined(b["rt.quit"], prefix + "does not have the rt.quit param");
 		}
+
+		for (i = 0; i < fieldsUndefined.length; i++) {
+			field = fieldsUndefined[i];
+			assert.isUndefined(b[field], prefix + field + " must not be on spa soft beacon");
+		}
 	}
 
+	/**
+	 * Validates an xhr beacon
+	 */
 	function testXhrBeacon(b, prefix) {
 		assert.isUndefined(b.api, prefix + "does not have the api param");
 		assert.isDefined(b.pgu, prefix + "has the pgu param");
 		assert.isUndefined(b["h.pg"], prefix + "does not have the h.pg param");
 	}
 
+	/**
+	 * Validates an early beacon against the load beacon
+	 */
+	function testEarlyBeacon(early, normal) {
+		var i, field, timer, timers, early_timers = {}, normal_timers = {};
+
+		// Don't test h.pg, we'll do some magic in the tests to make sure page params runs twice
+
+		// Not yet tested:
+		// "vis.st",
+		// "dom.res",
+		// "dom.doms",
+		// "mem.total",
+		// "mem.limit",
+		// "mem.used",
+		// "scr.xyv",
+		// "scr.bpp",
+		// "scr.orn",
+		// "scr.dpx",
+		// "cpu.cnc",
+		// "bat.lvl",
+		// "dom.ln",
+		// "dom.sz",
+		// "dom.img",
+		// "dom.script",
+		// "dom.script.ext",
+		// "dom.iframe",
+		// "dom.iframe.ext",
+		// "dom.link",
+
+		// fields that should be the same on both beacons
+		var fieldsEqual = [
+			"h.key",
+			"rt.start",
+			"rt.bmr",
+			"rt.tstart",
+			"rt.nstart",
+			"rt.bstart",
+			"rt.blstart",
+			"rt.si",
+			"rt.ss",
+			"rt.sstr_dur",
+			"rt.sstr_to",
+			"v",
+			"pid",
+			"ua.plt",
+			"ua.vnd",
+			"u",
+			"nt_red_cnt",
+			"nt_nav_type",
+			"nt_nav_st",
+			"nt_red_st",
+			"nt_red_end",
+			"nt_fet_st",
+			"nt_dns_st",
+			"nt_dns_end",
+			"nt_con_st",
+			"nt_con_end",
+			"nt_req_st",
+			"nt_res_st",
+			"nt_res_end",
+			"nt_domloading",
+			"nt_domint",
+			"nt_domcontloaded_st",
+			"nt_domcontloaded_end",
+			"nt_unload_st",
+			"nt_unload_end",
+			"nt_domcomp",
+			"nt_load_st",
+			"nt_load_end",  // load could have ended in the case of SPA hard
+			"nt_first_paint",
+			"nt_spdy",
+			"nt_cinf",
+			"if",
+			"vis.pre",
+			"t_configls",
+			"t_domloaded",
+			"t_load",
+			"t_prerender",
+			"t_postrender"
+		];
+
+		// fields that should not be on early beacon
+		var fieldsUndefined = [
+			// no page load timing available yet
+			"t_resp",
+			"t_page",
+			"t_done",
+			"restiming"  // no restiming on early beacons
+		];
+
+		// fields that should be the same on both beacons if available
+		var fieldsEqualIfExists = [
+			"rt.cnf",  // may not be there if config loaded from localStorage
+			"t_configfb",
+			"t_configjs"
+		];
+
+		// fields that must be on the early beacon
+		var fieldsMustExist = [
+			"rt.end",
+			"rt.tt",
+			"early"
+		];
+
+		for (i = 0; i < fieldsEqual.length; i++) {
+			field = fieldsEqual[i];
+			if (field.indexOf("nt_") === 0 && (!(field in early) || early[field] === 0)) {
+				// nav timing fields may be 0 or missing on the early beacon
+				continue;
+			}
+			if (typeof normal[field] === "undefined") {
+				assert.isUndefined(early[field], field + " must not be on early beacon if not on the load beacon");
+			}
+			else {
+				assert.equal(normal[field], early[field], field + " " + normal[field] + " === " +  early[field]);
+			}
+		}
+
+		for (i = 0; i < fieldsUndefined.length; i++) {
+			field = fieldsUndefined[i];
+			assert.isUndefined(early[field], field + " must not be on early beacon");
+		}
+
+		for (i = 0; i < fieldsEqualIfExists.length; i++) {
+			field = fieldsEqualIfExists[i];
+			if (typeof early[field] !== "undefined") {
+				assert.equal(normal[field], early[field], field + " " + normal[field] + " === " +  early[field]);
+			}
+		}
+
+		for (i = 0; i < fieldsMustExist.length; i++) {
+			field = fieldsMustExist[i];
+			assert.isDefined(early[field], field + " must exist");
+		}
+
+		// rt.sl should be 1 less on the early beacon
+		assert.equal(parseInt(normal["rt.sl"], 10), parseInt(early["rt.sl"], 10) + 1,
+		    "session length " + normal["rt.sl"] + " === " +  early["rt.sl"] + " + 1");
+
+		// rt.obo should be equal or 1 more on the normal beacon (if navtiming not supported)
+		if (early["rt.obo"] !== normal["rt.obo"] && (parseInt(early["rt.obo"], 10) + 1) !== parseInt(normal["rt.obo"], 10)) {
+			assert.fail("rt.obo must be equal or 1 more on normal beacon");
+		}
+
+		// t_other, if a timer is on the early beacon then it must be on the normal beacon
+		if (early.t_other) {
+			if (normal.t_other) {
+				normal_timers = t.parseTimers(normal.t_other);
+				early_timers = t.parseTimers(early.t_other);
+
+				for (timer in early_timers) {
+					if (early_timers.hasOwnProperty(timer)) {
+						if (timer.indexOf("custom") === 0) {
+							//custom timers may get longer (eg. ResourceGroups matching several resources)
+							assert.operator(normal_timers[timer], ">=", early_timers[timer],
+						    "t_other  " + timer + " " + normal_timers[timer] + " >= " +  early_timers[timer]);
+						}
+						else {
+							assert.equal(normal_timers[timer], early_timers[timer],
+							    "t_other  " + timer + " " + normal_timers[timer] + " === " +  early_timers[timer]);
+						}
+					}
+				}
+			}
+			else {
+				assert.fail("t_other on early beacon but missing on the normal beacon");
+			}
+		}
+
+		// http.initiator must be the same in both beacons (even if it is undefined)
+		assert.equal(early["http.initiator"], normal["http.initiator"], "both beacons should have the same initiator (http.initiator)");
+	};
+
 	it("Should have sent beacons that pass basic validation", function() {
-		var i, b, tm, now, prefix;
+		var i, b, tm, now = perfNow(), prefix, nextb;
 
 		if (!tf.beacons.length) {
 			return this.skip();
@@ -64,7 +284,6 @@ describe("common", function() {
 
 		for (i = 0; i < tf.beacons.length; i++) {
 			b = tf.beacons[i];
-			now = perfNow();
 			prefix = "ensure beacon " + (i + 1) + " ";
 
 			assert.equal(b.n, i + 1, prefix + "has the correct beacon number");
@@ -83,9 +302,24 @@ describe("common", function() {
 			assert.isDefined(b["h.d"], prefix + "has the domain (h.d) param");
 
 			assert.isDefined(b["h.t"], prefix + "has the time (h.t) param");
-			tm = parseInt(b["h.t"], 10);
-			assert.operator(tm, ">", now - (60 * 1000), prefix + "time is greater than a minute ago");
-			assert.operator(tm, "<", now, prefix + "time is less than now");
+
+			if (!b.early) {
+				// not early beacon
+				if (typeof b["rt.sl"] !== "undefined") {
+					assert.operator(parseInt(b["rt.sl"], 10), ">", 0);
+				}
+			}
+			else {
+				// early beacon
+				if (typeof b["rt.sl"] !== "undefined") {
+					assert.operator(parseInt(b["rt.sl"], 10), ">=", 0);
+				}
+
+				assert.operator(i + 1, "<", tf.beacons.length, prefix + "(early) is not the last beacon");
+				nextb = tf.beacons[i + 1];
+				assert.isUndefined(nextb.early, "(early) should not be followed by another early beacon");
+				testEarlyBeacon(b, nextb);
+			}
 
 			if (window.BOOMR_LOGN_always !== true) {
 				assert.equal(b["h.cr"], "abc", prefix + "has the correct crumb (h.cr)");
@@ -206,8 +440,19 @@ describe("common", function() {
 		}
 	});
 
-	it("BUG: should have sent beacons without negative timers", function() {
-		var i, b, prefix, t_done, t_resp, t_page, timers, timer;
+	it("Should have sent beacons with valid timers", function() {
+		var i, j, b, prefix, timer;
+		var TIMERS = [
+			"t_done",
+			"t_resp",
+			"t_page",
+			"rt.tt",
+			"mob.rtt",
+			"pt.fp",
+			"pt.fcp",
+			"pt.lcp",
+			"rt.sstr_dur"
+		];
 
 		if (!tf.beacons.length) {
 			return this.skip();
@@ -216,20 +461,31 @@ describe("common", function() {
 		for (i = 0; i < tf.beacons.length; i++) {
 			b = tf.beacons[i];
 			prefix = "ensure beacon " + (i + 1) + " ";
-			if (b.t_done) {
-				t_done = parseInt(b.t_done, 10);
-				assert.operator(t_done, ">=", 0, prefix + "has a positive 't_done' timer");
+
+			if (typeof b["rt.tstart"] !== "undefined" && typeof b["rt.end"] !== "undefined" && typeof b.t_done !== "undefined") {
+				assert.equal(parseInt(b["rt.end"]) - parseInt(b["rt.tstart"]), parseInt(b.t_done), prefix + "has rt.end - rt.tstart == t_done");
 			}
 
-			if (b.t_resp) {
-				t_resp = parseInt(b.t_resp, 10);
-				assert.operator(t_resp, ">=", 0, prefix + "has a positive 't_resp' timer");
+			for (var j = 0; j < TIMERS.length; j++) {
+				timer = TIMERS[j];
+				if (typeof b[timer] !== "undefined") {
+					assert.operator(parseInt(b[timer], 10), ">=", 0, prefix + "has a positive '" + timer + "' timer");
+					assert.operator(parseInt(b[timer], 10), "<", 10 * 60 * 1000, prefix + "has a sane value for '" + timer + "' timer");
+				}
 			}
+		}
+	});
 
-			if (b.t_page) {
-				t_page = parseInt(b.t_page, 10);
-				assert.operator(t_page, ">=", 0, prefix + "has a positive 't_page' timer");
-			}
+	it("BUG: Should have sent beacons without negative custom timers", function() {
+		var i, b, prefix, timers, timer;
+
+		if (!tf.beacons.length) {
+			return this.skip();
+		}
+
+		for (i = 0; i < tf.beacons.length; i++) {
+			b = tf.beacons[i];
+			prefix = "ensure beacon " + (i + 1) + " ";
 
 			if (b.t_other) {
 				timers = t.parseTimers(b.t_other);
@@ -244,6 +500,62 @@ describe("common", function() {
 							assert.operator(parseInt(b[timer + "_st"], 10), ">=", 0, prefix + "has a positive '" + timer + "_st' value");
 						}
 					}
+				}
+			}
+		}
+	});
+
+	it("Should have sent beacons with valid epoch times", function() {
+		var i, j, b, prefix, param, tm, now = perfNow();
+		var TIMES = [
+			"h.t",
+			"rt.tstart",
+			"rt.end",
+			"rt.ss",
+			"t.bstart",
+			"nt_nav_st",
+			"nt_fet_st",
+			"nt_dns_st",
+			"nt_dns_end",
+			"nt_con_st",
+			"nt_con_end",
+			"nt_req_st",
+			"nt_res_st",
+			"nt_res_end",
+			"nt_domloading",
+			"nt_domint",
+			"nt_domcontloaded_st",
+			"nt_domcontloaded_end",
+			"nt_domcomp",
+			"nt_load_st",
+			"nt_load_end",
+			"nt_unload_st",
+			"nt_unload_end",
+			"nt_ssl_st",
+			"nt_first_paint"
+		];
+		if (!tf.beacons.length) {
+			return this.skip();
+		}
+
+		for (i = 0; i < tf.beacons.length; i++) {
+			b = tf.beacons[i];
+			prefix = "ensure beacon " + (i + 1) + " ";
+
+			for (var j = 0; j < TIMES.length; j++) {
+				param = TIMES[j];
+				if (b.nt_bad && param.match(/^nt_/)) {
+					// don't check navtiming timers, they were detected as bad
+					continue;
+				}
+				if (typeof b[param] !== "undefined") {
+					tm = parseInt(b[param], 10);
+					if (tm === 2997993600000) {
+						// this future timestamp is used for debugging
+						continue;
+					}
+					// now +- an hour. Cloud based Simulators/Emulators might have clock skew
+					assert.closeTo(tm, now, (70 * 60 * 1000), prefix + "has " + param + "  as a valid timestamp");
 				}
 			}
 		}

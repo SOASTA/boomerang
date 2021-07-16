@@ -9,7 +9,7 @@ In this case a spa soft event will start while an xhr pending event is waiting f
 <script src="51-concurrent-events.js" type="text/javascript"></script>
 <script>
 BOOMR_test.init({
-	"instrument_xhr": true,
+	instrument_xhr: true,
 	testAfterOnBeacon: (BOOMR.plugins.AutoXHR) ? 3 : 1,
 	AutoXHR: {
 		xhrIdleTimeout: 2000,  // modify the timeouts to guaranty concurrency

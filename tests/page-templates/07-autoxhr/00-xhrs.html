@@ -10,6 +10,9 @@ window.xoUrl = "//<%= secondaryServer %>:" + window.location.port + "/blackhole"
 BOOMR_test.init({
 	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 13 : 1,
 	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	autorun: true,
 	afterFirstBeacon:
 		function() {

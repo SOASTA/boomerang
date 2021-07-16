@@ -135,8 +135,8 @@
 
 			if (!impl.base_url) {
 				BOOMR.warn("DNS.base_url is not set.  Cannot run DNS test.", "dns");
-				impl.complete = true;	// set to true so that is_complete doesn't
-							// block other plugins
+				impl.complete = true;  // set to true so that is_complete doesn't
+				                       // block other plugins
 				return this;
 			}
 

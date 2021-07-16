@@ -55,7 +55,12 @@ describe("BOOMR.utils.isInteger()", function() {
 	});
 
 	it("Should have restored accesss to the native Number.isInteger function", function() {
-		Number.isInteger = origIsInteger;
-		assert.isDefined(Number.isInteger);
+		if (typeof origIsInteger !== "undefined") {
+			Number.isInteger = origIsInteger;
+			assert.isDefined(Number.isInteger);
+		}
+		else {
+			this.skip();
+		}
 	});
 });

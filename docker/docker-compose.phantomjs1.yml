@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  #docker build --build-arg PHANTOM_JS_VERSION=1.9.8-linux-x86_64 -t phantomjs198_image .
+  phantomjs1:
+    build:
+      context: .
+      dockerfile: Dockerfile.phantomjs  # copied from https://raw.githubusercontent.com/wernight/docker-phantomjs/master/Dockerfile
+      args:
+        - PHANTOM_JS_VERSION=1.9.8-linux-x86_64
+    command:
+      # sleep to give the hub time to load, phantom will not retry.
+      # Do the host to IP lookup in bash, the phantom argument must be an IP
+      /bin/bash -c "echo 'sleeping 10s..'; sleep 10; /usr/local/bin/phantomjs --webdriver=phantomjs1:8910 --webdriver-selenium-grid-hub=http://`getent ahostsv4 selenium-hub | grep STREAM | head -n 1 | cut -d ' ' -f 1`:4444"
+    expose:
+       - 8910
+    #ports:
+    #  - 8910:8910
+    depends_on:
+      - selenium-hub
+    networks:
+      - boomerang

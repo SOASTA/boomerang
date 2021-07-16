@@ -40,7 +40,6 @@ describe("e2e/21-continuity/34-keep-going-api-beacon", function() {
 
 			var tti = parseInt(b["c.tti"], 10);
 			assert.operator(tti, ">=", p.timing.domContentLoadedEventEnd - p.timing.navigationStart);
-			assert.operator(tti, "<=", (p.timing.loadEventStart - p.timing.navigationStart) + 100);
 		}
 	});
 

@@ -27,3 +27,5 @@ tests/page-templates/12-react/support/app.js
 tests/perf/results/
 tests/perf/pages/
 tests/perf/scenarios.json
+plugins.user.json
+environments.json

@@ -15,6 +15,10 @@ describe("e2e/11-restiming/05-no-beacon-url", function() {
 	});
 
 	it("None of the beacons should have the beacon URL in restiming", function() {
+		if (!window.BOOMR.plugins.AutoXHR) {
+			return this.skip();
+		}
+
 		for (var i = 0; i < 3; i++) {
 			assert.notInclude(tf.beacons[i].restiming, "blackhole");
 		}

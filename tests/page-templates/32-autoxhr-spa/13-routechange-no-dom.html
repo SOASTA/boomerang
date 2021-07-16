@@ -1,0 +1,31 @@
+<%= header %>
+<%= boomerangScript %>
+<button id="clickable">Clickable Button!</button>
+<script src="13-routechange-no-dom.js" type="text/javascript"></script>
+
+<script>
+BOOMR_test.init({
+	AutoXHR: {
+		spaStartFromClick: false
+	},
+	testAfterOnBeacon: false,
+	History: {
+		enabled: true,
+		auto: true
+	},
+	instrument_xhr: true,
+	autorun: false,
+	afterFirstBeacon: function() {
+		if (!BOOMR.plugins.AutoXHR) {
+			return;
+		}
+
+		// 1. route change
+		// 2. nothing more
+		BOOMR_test.routeChangeRnd("newstate");
+
+		setTimeout(BOOMR_test.runTests, 2000);
+	}
+});
+</script>
+<%= footer %>

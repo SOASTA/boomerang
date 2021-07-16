@@ -18,7 +18,7 @@ describe("e2e/00-basic/11-local-domains", function() {
 	it("Should have successfully requested a resource from it's main server domain (--main-domain in grunt)", function(done){
 		var xhr1 = new XMLHttpRequest();
 
-		xhr1.open("GET", "http://" + window.mainServer + ":" + (window.mainPort) + "/pages/00-basic/support/generic.html");
+		xhr1.open("GET", "//" + window.mainServer + ":" + (window.mainPort) + "/pages/00-basic/support/generic.html");
 		xhr1.send(null);
 
 		xhr1.addEventListener("load", function() {
@@ -31,7 +31,7 @@ describe("e2e/00-basic/11-local-domains", function() {
 	it("Should have successfully requested a resource from it's secondary server domain (--secondary-domain in grunt)", function(done){
 		var xhr2 = new XMLHttpRequest();
 
-		xhr2.open("GET", "http://" + window.secondaryServer + ":" + (window.secondaryPort) + "/pages/00-basic/support/generic.html");
+		xhr2.open("GET", "//" + window.secondaryServer + ":" + (window.secondaryPort) + "/pages/00-basic/support/generic.html");
 		xhr2.send(null);
 
 		xhr2.addEventListener("load", function() {

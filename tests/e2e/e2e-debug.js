@@ -21,20 +21,22 @@ function run(testPath, file) {
 		var fileName = file + ".html";
 
 		it("Should pass " + testPath + "/" + fileName, function(done) {
+			var url = servers.scheme + "://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName;
+
 			if (typeof browser.waitForAngularEnabled === "function") {
 				browser.waitForAngularEnabled(false);
 			}
 
 			console.log(
 				"Navigating to",
-				"http://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName
+				url
 			);
 
 			browser.driver.executeScript("return navigator.userAgent;").then(function(ua) {
 				console.log("User-Agent:", ua);
 			});
 
-			browser.driver.get("http://" + servers.main + ":" + ports.main + "/pages/" + testPath + "/" + fileName);
+			browser.driver.get(url);
 
 			// poll every 100ms for new logs or the test framework to note we're complete
 			(function poll() {

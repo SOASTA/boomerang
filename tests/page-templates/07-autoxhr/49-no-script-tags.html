@@ -3,8 +3,11 @@
 <%= boomerangScript %>
 <script>
 BOOMR_test.init({
-	"instrument_xhr": true,
+	instrument_xhr: true,
 	testAfterOnBeacon: (BOOMR.plugins.AutoXHR) ? 2 : 1,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	afterFirstBeacon:
 		function() {
 			if (!BOOMR.plugins.AutoXHR) {

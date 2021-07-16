@@ -12,7 +12,11 @@
  * * `mob.ct`: [`navigator.connection.type`](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/type)
  * * `mob.bw`: [`navigator.connection.bandwidth`](https://developer.mozilla.org/en-US/docs/Web/API/Connection/bandwidth)
  * * `mob.mt`: [`navigator.connection.metered`](https://developer.mozilla.org/en-US/docs/Web/API/Connection/metered)
+ * * `mob.etype`: [`navigator.connection.effectiveType`](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/effectiveType)
  * * `mob.lm`: [`navigator.connection.downlinkMax`](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/downlinkMax)
+ * * `mob.dl`: [`navigator.connection.downlink](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/downlink)
+ * * `mob.rtt`: [`navigator.connection.rtt`](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/rtt)
+ * * `mob.sd`: [`navigator.connection.saveData`](https://developer.mozilla.org/en-US/docs/Web/API/NetworkInformation/saveData)
  *
  * @class BOOMR.plugins.Mobile
  */

@@ -4,6 +4,12 @@
 describe("BOOMR.utils.Compression", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.utils || !BOOMR.utils.Compression) {
+			return this.skip();
+		}
+	});
+
 	describe("BOOMR.utils", function() {
 		it("Should have a Compression object", function() {
 			assert.isObject(BOOMR.utils.Compression);

@@ -18,10 +18,6 @@ describe("e2e/22-early/02-prerender-onload-not-fired", function() {
 			assert.isDefined(b.early);
 		});
 
-		it("Should pass early beacon validation", function() {
-			t.validateEarlyBeacon(tf.beacons[0], tf.beacons[1]);
-		});
-
 		// the following tests are only executed if mPulse's PageParams plugin exists
 		if (BOOMR.plugins.PageParams) {
 			it("Should have a h.pg of MYPAGEGROUP", function() {
@@ -36,7 +32,7 @@ describe("e2e/22-early/02-prerender-onload-not-fired", function() {
 		});
 
 		// it("Should have been sent after visible event", function() {
-			// TODO
+		// 	// TODO
 		// });
 	});
 

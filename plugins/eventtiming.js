@@ -171,13 +171,15 @@
 				BOOMR.subscribe("before_beacon", impl.onBeforeBeacon, null, impl);
 
 				try {
-					impl.observerEvent = new PerformanceObserver(impl.onEventTiming);
+					var w = BOOMR.window;
+
+					impl.observerEvent = new w.PerformanceObserver(impl.onEventTiming);
 					impl.observerEvent.observe({
 						type: ["event"],
 						buffered: true
 					});
 
-					impl.observerFirstInput = new PerformanceObserver(impl.onFirstInput);
+					impl.observerFirstInput = new w.PerformanceObserver(impl.onFirstInput);
 					impl.observerFirstInput.observe({
 						type: ["first-input"],
 						buffered: true
@@ -226,11 +228,13 @@
 				return impl.supported;
 			}
 
+			var w = BOOMR.window;
+
 			// check for getEntriesByType and the entry type existing
 			var p = BOOMR.getPerformance();
 			impl.supported = p &&
-				typeof window.PerformanceEventTiming !== "undefined" &&
-				typeof window.PerformanceObserver === "function";
+				typeof w.PerformanceEventTiming !== "undefined" &&
+				typeof w.PerformanceObserver === "function";
 
 			if (impl.supported) {
 				BOOMR.info("This user agent supports EventTiming", "et");

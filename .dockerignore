@@ -1,0 +1,11 @@
+.git
+.github
+node_modules
+build
+tests/build
+tests/pages
+tests/vendor
+tests/coverage
+tests/results
+tests/samples
+tests/perf/results

@@ -1,0 +1,42 @@
+#
+# boomerang project task runner image
+#
+# Installs node and bower dependencies inside the image
+# The project itself will be on a volume and not be copied into the image
+# The boomerang-test webserver will run in this container
+#
+
+# don't use node-slim, we need python, git, etc.
+FROM node:lts
+
+LABEL maintainer="nheron"
+
+ARG USER=appuser
+ARG GROUP=$USER
+ARG UID=10000
+ARG GID=10000
+
+RUN groupadd --gid $GID --non-unique $GROUP && \
+    useradd --create-home --shell /bin/bash --uid $UID --gid $GID --non-unique $USER
+
+USER ${USER}
+
+RUN mkdir /home/$USER/boomerang
+
+WORKDIR /home/$USER/boomerang
+
+ENV PATH /home/$USER/boomerang/node_modules/.bin:$PATH
+
+# install required packages and libs
+COPY package.json package-lock.json bower.json .bowerrc ./
+RUN npm cache clean --force && npm ci && bower install
+
+# Karma ports (for unit tests)
+EXPOSE 4000
+
+# Express ports (for e2e tests)
+EXPOSE 4002
+EXPOSE 4003
+
+ENTRYPOINT ["/bin/bash"]
+#["node_modules/.bin/grunt"]

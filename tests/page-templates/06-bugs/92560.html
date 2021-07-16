@@ -6,8 +6,11 @@ IE doesn't return a leading slash (/) on anchor.pathname, XHR exclude list was n
 <%= boomerangScript %>
 <script>
 BOOMR_test.init({
-	"instrument_xhr": true,
+	instrument_xhr: true,
 	testAfterOnBeacon: 1,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	afterFirstBeacon:
 		function() {
 			if (!BOOMR.plugins.AutoXHR) {

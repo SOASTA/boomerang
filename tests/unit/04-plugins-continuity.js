@@ -4,6 +4,12 @@
 describe("BOOMR.plugins.Continuity", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.plugins.Continuity) {
+			return this.skip();
+		}
+	});
+
 	describe("exports", function() {
 		it("Should have a Continuity object", function() {
 			assert.isObject(BOOMR.plugins.Continuity);

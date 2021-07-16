@@ -1,0 +1,46 @@
+<%= header %>
+<%= boomerangScript %>
+<button id="clickable">Clickable Button!</button>
+<script src="16-click-routechange-xhr-img.js" type="text/javascript"></script>
+
+<script>
+BOOMR_test.init({
+	AutoXHR: {
+		spaStartFromClick: true
+	},
+	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 2 : 1,
+	History: {
+		enabled: true,
+		auto: true
+	},
+	instrument_xhr: true,
+	autorun: false,
+	afterFirstBeacon: function() {
+		if (!BOOMR.plugins.AutoXHR) {
+			return;
+		}
+
+		// 1. click <- beacon 1
+		// 2. wait 30ms
+		// 3. oncomplete, route change
+		// 4. wait 30ms
+		// 5. XHR (2000ms)
+		// 6. wait 10ms
+		// 7. add IMG to DOM (2000ms)
+		BOOMR_test.fireMouseEvent("mouseup");
+
+		setTimeout(function() {
+			BOOMR_test.routeChangeRnd("newstate");
+
+			setTimeout(function() {
+				BOOMR_test.xhrDelayed("xhr1", 2000, function() {
+					setTimeout(function() {
+						BOOMR_test.imgIntoDomDelayed("img1", 2000);
+					}, 10);
+				});
+			}, 30);
+		}, 30);
+	}
+});
+</script>
+<%= footer %>

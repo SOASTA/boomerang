@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  # https://wiki.saucelabs.com/display/DOCS/Sauce+Connect+Proxy
+  # opens a tunnel between SauceLabs and localhost served web server
+  sauce-connect:
+    build:
+      context: .
+      dockerfile: Dockerfile.sauce-connect
+    environment:
+      - SAUCE_USERNAME
+      - SAUCE_ACCESS_KEY
+    ulimits:
+          nofile:
+              soft: 10000  # SL recommends at least 8000
+              hard: 10000
+    networks:
+      - boomerang
+    command: ["--no-proxy-caching", "--se-port=4445"]

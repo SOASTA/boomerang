@@ -21,5 +21,141 @@
         "plugins/mq.js",
         "plugins/early.js",
         "plugins/eventtiming.js"
-    ]
+    ],
+    "flavors": {
+        "minimal": {
+            "comment": "Minimal plugins needed for mPulse",
+            "revision": 10,
+            "plugins": [
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "default": {
+            "comment": "Minimal plus restiming",
+            "revision": 20,
+            "plugins": [
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "default-errors": {
+            "comment": "Default plus error tracking",
+            "revision": 30,
+            "plugins": [
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/errors.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js",
+                "06-bugs/104197"
+            ]
+        },
+        "default-spa": {
+            "comment": "Default plus SPA",
+            "revision": 40,
+            "plugins": [
+                "plugins/auto-xhr.js",
+                "plugins/spa.js",
+                "plugins/history.js",
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "default-spa-errors": {
+            "comment": "Default plus SPA and Error Tracking",
+            "revision": 50,
+            "plugins": [
+                "plugins/auto-xhr.js",
+                "plugins/spa.js",
+                "plugins/history.js",
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/errors.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "cutting-edge": {
+            "comment": "Continuity metrics",
+            "revision": 60,
+            "plugins": [
+                "plugins/continuity.js",
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "cutting-edge-errors": {
+            "comment": "Default plus Continuity metrics plus Error Tracking",
+            "revision": 70,
+            "plugins": [
+                "plugins/continuity.js",
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/errors.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        },
+        "cutting-edge-spa": {
+            "comment": "Continuity metrics plus SPA",
+            "revision": 80,
+            "plugins": [
+                "plugins/continuity.js",
+                "plugins/auto-xhr.js",
+                "plugins/spa.js",
+                "plugins/history.js",
+                "plugins/rt.js",
+                "plugins/painttiming.js",
+                "plugins/navtiming.js",
+                "plugins/restiming.js",
+                "plugins/mobile.js",
+                "plugins/memory.js",
+                "plugins/compression.js",
+                "plugins/mq.js",
+                "plugins/eventtiming.js"
+            ]
+        }
+    }
 }

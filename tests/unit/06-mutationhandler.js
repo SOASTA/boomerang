@@ -4,6 +4,13 @@
 describe("BOOMR.plugins.AutoXHR.MutationHandler", function() {
 	var assert = chai.assert;
 	var t = BOOMR_test;
+
+	beforeEach(function() {
+		if (!BOOMR.plugins.AutoXHR) {
+			return this.skip();
+		}
+	});
+
 	it("Should return interesting true from wait_for_node if container has network bound resources", function() {
 		if (t.isMutationObserverSupported()) {
 			// Get current handler

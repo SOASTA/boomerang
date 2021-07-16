@@ -238,7 +238,12 @@ describe("e2e/00-basic/12-addvar", function() {
 			}
 
 			for (var i = 0; i < tf.beacons.length; i++) {
-				assert.strictEqual(getBeaconData(i, "var8"), "~(a~1)");
+				if (BOOMR.utils.Compression && BOOMR.utils.Compression.jsUrl) {
+					assert.strictEqual(getBeaconData(i, "var8"), "~(a~1)");
+				}
+				else {
+					assert.strictEqual(getBeaconData(i, "var8"), "{\"a\":1}");
+				}
 			}
 		});
 

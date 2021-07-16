@@ -58,7 +58,10 @@ describe("e2e/05-angular/121-painttiming.js", function() {
 			// validation of First Contentful Paint
 			assert.isNumber(tf.beacons[0]["pt.fcp"]);
 			assert.operator(parseInt(tf.beacons[0]["pt.fcp"], 10), ">=", 0);
-			assert.operator(parseInt(tf.beacons[0]["pt.fcp"], 10), ">=", parseInt(tf.beacons[0]["pt.fp"], 10));
+			if (tf.beacons[0]["pt.fp"]) {
+				// FF has fcp but no fp
+				assert.operator(parseInt(tf.beacons[0]["pt.fcp"], 10), ">=", parseInt(tf.beacons[0]["pt.fp"], 10));
+			}
 			assert.equal(tf.beacons[0]["pt.fcp"], Math.floor(pt.startTime));
 		});
 	});

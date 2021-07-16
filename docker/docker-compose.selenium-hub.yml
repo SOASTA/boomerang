@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  selenium-hub:
+    image: selenium/hub:3.14.0  # can't go past 3.14.0 with phantomjs. See https://github.com/SeleniumHQ/selenium/issues/6771
+    # environment:
+    #   - SE_OPTS="-debug"  # debugging
+    # ports:
+    #  - 4444:4444
+    expose:
+      - 4444
+    networks:
+      - boomerang

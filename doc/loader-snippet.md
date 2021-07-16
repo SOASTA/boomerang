@@ -41,7 +41,7 @@ Note: We split the `<body` tag insertion into `<bo` and `dy` to avoid server-sid
 
 For proof that the non-blocking script loader pattern does not affect page load,
 you can look at this
-[test case](http://dev.nicj.net/boomerang-audit/test-mpulse-loader-snippet-delayed.html)
+[test case](https://dev.nicj.net/boomerang-audit/test-mpulse-loader-snippet-delayed.html)
 that delays JavaScript from loading by 5 seconds or these
 [WebPagetest results](https://www.webpagetest.org/result/171221_HD_bb090190517fa8dd101859e8c1f327fe/).
 
@@ -83,3 +83,20 @@ Minified:
 ```javascript
 <script>%minified_delayed_loader_snippet%</script>
 ```
+
+## Known Issues
+
+* Websites using Google Tag Manager (GTM) to inject the Loader Snippet may not see beacons from Firefox <= 74
+    * These versions of Firefox do not support Preload, so fallback to using the IFRAME loader
+    * boomerang.js is not fetched due to a Firefox bug with setting the `iframe.src = "about:blank"`, which is done for Content Security Policies (CSP) compatibility
+    * Websites that are not using Content Security Policies can change:
+        ```
+        // An empty frame
+        iframe.src = "about:blank";
+        ```
+        to
+        ```
+        // An empty frame
+        iframe.src = "javascript:void(0)";
+        ```
+    * Websites that are using Content Security Policies should use a `<script async>` tag to load boomerang.js instead of the Loader Snippet

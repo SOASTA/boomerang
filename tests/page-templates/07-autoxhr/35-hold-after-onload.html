@@ -4,7 +4,10 @@
 <script>
 BOOMR_test.init({
 	testAfterOnBeacon: 2,
-	instrument_xhr: true
+	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	}
 });
 
 var isComplete = false;

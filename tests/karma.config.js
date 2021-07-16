@@ -4,6 +4,9 @@ var url = require("url");
 
 module.exports = function(config) {
 	var remoteSelenium = false, u, webdriverConfig;
+
+	var tapFileName = "results/unit" + (process.env.BUILD_FLAVOR ? ("-" + process.env.BUILD_FLAVOR) : "") + ".tap";
+
 	if (config.SELENIUM_ADDRESS) {
 		remoteSelenium = true;
 		u = url.parse(config.SELENIUM_ADDRESS, true);
@@ -11,6 +14,10 @@ module.exports = function(config) {
 			hostname: u.hostname,
 			port: u.port
 		};
+		if (u.auth) {
+			webdriverConfig.user = u.auth.split(":")[0];
+			webdriverConfig.pwd = u.auth.split(":")[1];
+		}
 	}
 
 	config.set({
@@ -40,7 +47,7 @@ module.exports = function(config) {
 		},
 
 		tapReporter: {
-			outputFile: "results/unit.tap"
+			outputFile: tapFileName
 		}
 	});
 
@@ -73,7 +80,9 @@ module.exports = function(config) {
 					base: "WebDriver",
 					config: webdriverConfig,
 					browserName: "firefox",
-					flags: ["--headless"],
+					"moz:firefoxOptions": {
+						args: [ "--headless" ]
+					},
 					platform: "ANY",
 					version: "ANY"
 				},

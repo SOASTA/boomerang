@@ -4,6 +4,12 @@
 describe("BOOMR.plugins.ResourceTiming", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.plugins.ResourceTiming) {
+			return this.skip();
+		}
+	});
+
 	describe("exports", function() {
 		it("Should have a ResourceTiming object", function() {
 			assert.isObject(BOOMR.plugins.ResourceTiming);

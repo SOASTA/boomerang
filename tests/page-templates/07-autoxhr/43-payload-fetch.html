@@ -6,7 +6,8 @@ var t = BOOMR_test;
 BOOMR_test.init({
 	instrument_xhr: true,
 	AutoXHR: {
-		monitorFetch: true
+		monitorFetch: true,
+		xhrRequireChanges: false
 	},
 	testAfterOnBeacon: BOOMR.plugins.AutoXHR && t.isFetchApiSupported() ? 3 : 1,
 	afterFirstBeacon:

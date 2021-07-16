@@ -8,6 +8,8 @@ var fs = require("fs");
 var readline = require("readline");
 var express = require("express");
 var compress = require("compression");
+var http = require("http");
+var https = require("https");
 
 //
 // Load env.json
@@ -15,7 +17,7 @@ var compress = require("compression");
 var envFile = path.resolve(path.join(__dirname, "env.json"));
 
 if (!fs.existsSync(envFile)) {
-	throw new Error("Please create " + envFile + ". There's a env.json.sample in the same dir.");
+	throw new Error("[APP] Please create " + envFile + ". There's a env.json.sample in the same dir.");
 }
 
 // load JSON
@@ -31,6 +33,20 @@ if (wwwRoot.indexOf("/") !== 0) {
 
 if (!fs.existsSync(wwwRoot)) {
 	wwwRoot = path.join(__dirname, "..");
+}
+
+var credentials = {};
+try {
+	var privatekey  = fs.readFileSync(path.join(__dirname, env.privatekey), "utf8");
+	var certificate = fs.readFileSync(path.join(__dirname, env.certificate), "utf8");
+	credentials = {
+		key: privatekey,
+		cert: certificate
+	};
+	console.log("[APP] Found credentials, key: " + env.privatekey + " cert: " + env.certificate);
+}
+catch (e) {
+	console.log("[APP] Credentials not found ", e);
 }
 
 var app = express();
@@ -172,6 +188,18 @@ require("express-middleware-server-timing")(app);
 
 // listen
 var port = process.env.PORT || env.port;
-app.listen(port, function() {
-	console.log("Server starting on port " + port + " for " + wwwRoot);
-});
+var scheme = (process.argv.length >= 2 && process.argv[2]) || "http";
+
+if (scheme === "https" && credentials.key && credentials.cert) {
+	var httpsServer = https.createServer(credentials, app);
+
+	httpsServer.listen(port, function() {
+		console.log("[APP] HTTPS Server starting on port " + port + " for " + wwwRoot);
+	});
+}
+else {
+	var httpServer = http.createServer(app);
+	httpServer.listen(port, function() {
+		console.log("[APP] HTTP Server starting on port " + port + " for " + wwwRoot);
+	});
+}

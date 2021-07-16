@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+  boomerang:
+    build:
+      context: ..  # needs the project as the context
+      dockerfile: docker/Dockerfile.boomerang  # since the context is .., we need to include the `docker` folder name
+      args:
+        - USER=${USER:-grunt}
+        - GROUP=${GROUP:-grunt}
+        - UID=${UID:-10000}
+        - GID=${GID:-10000}
+    user: "${UID}:${GID}"
+    working_dir: /home/${USER}/boomerang
+    volumes:
+      - ../:/home/${USER}/boomerang  # use the project as the work dir (files written in docker will be reflected on the file system)
+      - /home/${USER}/boomerang/node_modules  # keep this dir local to docker image
+      - /home/${USER}/boomerang/tests/vendor  # keep this dir local to docker image
+    expose:
+      - 4002
+      - 4003
+    #depends_on:
+    #  - selenium-hub
+    environment:
+      - CAPABILITIES
+    networks:
+      boomerang:
+        aliases:
+          - boomerang-test.local
+          - boomerang-test2.local
+    command: "${BASHPARAMS}"
+    #command: "-c 'grunt test:e2e --test-browser=Safari --force --selenium-address=http://$SAUCE_USERNAME:$SAUCE_ACCESS_KEY@sauce-connect:4445/wd/hub'"
+
+networks:
+  boomerang:

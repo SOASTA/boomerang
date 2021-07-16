@@ -1,0 +1,32 @@
+<%= header %>
+<%= boomerangScript %>
+<script src="52-autoxhr-restiming.js" type="text/javascript"></script>
+<img src="/delay?delay=5000&file=/assets/img.jpg&id=base" />
+<script>
+BOOMR_test.init({
+	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 2 : 1,
+	instrument_xhr: true,
+	ResourceTiming: {
+		enabled: true
+	}
+});
+
+if (BOOMR.plugins.AutoXHR) {
+	// send an XHR before the Page Load is complate (@ 5s)
+	var xhr = new XMLHttpRequest();
+
+	xhr.open("GET", "/delay?delay=500&file=/assets/img.jpg&id=1&rnd=" + Math.random(), true);
+
+	xhr.onreadystatechange = function() {
+		// add some content to the screen so it's important
+		if (xhr.readyState === 4) {
+			var img = document.createElement("img");
+			img.src = "/delay?delay=500&file=/assets/img.jpg&id=2&rnd=" + Math.random();
+			document.body.appendChild(img);
+		}
+	};
+
+	xhr.send(null);
+}
+</script>
+<%= footer %>

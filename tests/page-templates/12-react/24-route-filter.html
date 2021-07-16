@@ -39,6 +39,7 @@ BOOMR_test.init({
 	instrument_xhr: true,
 	autorun: false,
 	AutoXHR: {
+		xhrRequireChanges: false,
 		excludeFilters: [{
 			cb: function(anchor) {
 				var url = anchor.href, result;

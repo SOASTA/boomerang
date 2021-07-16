@@ -48,6 +48,7 @@
 		disableHardNav: false,  // whether or not to disable SPA hard beacons
 		routeFilter: undefined,  // route change filter callback function
 		routeChangeWaitFilter: undefined,  // route change wait filter callback function
+		routeChangeWaitFilterHardNavs: false, // whether to apply wait filter on hard navs
 		monitorReplaceState: true,  // whether or not to hook history.replaceState
 		a: undefined,  // helper anchor object used to cleanup urls
 		browserOnloadBeforeSetup: false,  // browser onload happened before our setup
@@ -329,6 +330,10 @@
 				options.routeChangeWaitFilter = impl.routeChangeWaitFilter;
 			}
 
+			if (impl.routeChangeWaitFilterHardNavs) {
+				options.routeChangeWaitFilterHardNavs = impl.routeChangeWaitFilterHardNavs;
+			}
+
 			if (!impl.hooked && impl.monitorHistory) {
 				setup();
 			}
@@ -357,6 +362,7 @@
 		 * @param {boolean} [config.History.disableHardNav] Whether or not to disable SPA hard beacons
 		 * @param {function} [config.History.routeFilter] Route change filter callback function
 		 * @param {function} [config.History.routeChangeWaitFilter] Route change wait filter callback function
+		 * @param {boolean} [config.History.routeChangeWaitFilterHardNavs] Whether to apply wait filter on hard navs
 		 * @param {boolean} [config.History.monitorReplaceState] Whether or not to hook History.replaceState
 		 *
 		 * @returns {@link BOOMR.plugins.History} The History plugin for chaining
@@ -371,7 +377,7 @@
 		init: function(config) {
 			BOOMR.utils.pluginConfig(impl, config, "History",
 				["enabled", "monitorHistory", "disableHardNav",
-				 "routeFilter", "routeChangeWaitFilter",
+				 "routeFilter", "routeChangeWaitFilter", "routeChangeWaitFilterHardNavs",
 				 "monitorReplaceState"]);
 
 			if (impl.enabled) {

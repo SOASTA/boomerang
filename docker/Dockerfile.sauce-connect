@@ -1,0 +1,36 @@
+# Image for the SauceLabs Connect Proxy
+
+FROM debian:latest
+
+LABEL maintainer="nheron"
+
+# https://wiki.saucelabs.com/display/DOCS/Downloading+Sauce+Connect+Proxy
+ARG SC_VERSION=4.6.2
+ARG SC_SHA1=7b7f35433af9c3380758e048894d7b9aecf3754e
+
+ARG SC_FN=sc-$SC_VERSION-linux.tar.gz
+
+# Install runtime dependencies
+RUN apt-get update -q \
+  && apt-get install -q -y --no-install-recommends \
+    ca-certificates \
+    wget \
+  && apt-get clean \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp/sauce-connect
+
+RUN wget --quiet https://saucelabs.com/downloads/$SC_FN \
+    && echo "$SC_SHA1 $SC_FN" | sha1sum -c - \
+    && tar -xzf $SC_FN \
+    && mv sc-$SC_VERSION-linux/bin/sc /usr/local/bin \
+    && rm -rf /tmp/sauce-connect/* \
+    && useradd --system --uid 52377 -m --shell /usr/sbin/nologin sc
+
+USER sc
+
+EXPOSE 4445
+EXPOSE 8032
+
+ENTRYPOINT ["sc"]
+CMD ["--version"]

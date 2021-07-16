@@ -2,8 +2,8 @@
 <!--
 	Same as 00-iframedelay but the iframes are cross origin
 -->
-<iframe id="frame1" src="http://<%= secondaryServer %>:<%= testPort %>/delay?delay=200&file=/pages/26-iframedelay/support/delayed-pageready.html"></iframe>
-<iframe id="frame2" src="http://<%= secondaryServer %>:<%= testPort %>/delay?delay=100&file=/pages/26-iframedelay/support/delayed-pageready.html"></iframe>
+<iframe id="frame1" src="//<%= secondaryServer %>:<%= testPort %>/delay?delay=200&file=/pages/26-iframedelay/support/delayed-pageready.html"></iframe>
+<iframe id="frame2" src="//<%= secondaryServer %>:<%= testPort %>/delay?delay=100&file=/pages/26-iframedelay/support/delayed-pageready.html"></iframe>
 <%= boomerangSnippet %>
 <script src="04-iframedelay-co.js" type="text/javascript"></script>
 

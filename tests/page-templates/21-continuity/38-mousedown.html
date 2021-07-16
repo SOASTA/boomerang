@@ -1,5 +1,6 @@
 <%= header %>
 <%= boomerangScript %>
+<img src="/delay?delay=5000&amp;file=assets/img.jpg"/>
 <script>
 BOOMR_test.init({
 	testAfterOnBeacon: true,
@@ -10,9 +11,12 @@ BOOMR_test.init({
 </script>
 <script src="38-mousedown.js" type="text/javascript"></script>
 <script>
-	// fire touchstart event
+	// fire mousedown event
 	var md = document.createEvent("Event");
 	md.initEvent("mousedown", true, true);
-	window.dispatchEvent(md);
+	// We add a delay because sometimes c.fid is too low and it's not reported
+	setTimeout(function() {
+		window.dispatchEvent(md);
+	}, 10);
 </script>
 <%= footer %>

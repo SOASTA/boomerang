@@ -97,9 +97,9 @@ describe("e2e/14-errors/24-autorun-false-multiple-then-load", function() {
 		}
 	});
 
-	it("Should have rt.sl = 0 on the first beacon", function() {
+	it("Should have rt.sl = 1 on the first beacon", function() {
 		var b = tf.beacons[0];
-		assert.equal(b["rt.sl"], 0);
+		assert.equal(b["rt.sl"], 1);
 	});
 
 	it("Should have rt.sl = 1 on the second beacon", function() {

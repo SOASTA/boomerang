@@ -1,0 +1,11 @@
+{
+    all: {
+        requires: ["memory"]
+    },
+    "03-hard-loop-arrayfilter-error-before-load": {
+        requires: ["bw", "rt", "errors"]
+    },
+    "04-hard-loop-arrayfilter-error-after-load": {
+        requires: ["bw", "rt", "errors"]
+    }
+}

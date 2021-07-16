@@ -38,9 +38,9 @@ BOOMR.session.domain = document.domain;
 BOOMR_test.init({
 	testAfterOnBeacon: 2,
 	afterFirstBeacon: function() {
-        // This triggers nu of RT cookie to be updated
+		// This triggers nu of RT cookie to be updated
 		document.getElementById("test-click-link").dispatchEvent(clickEvent);
-        // We trigger second beacon to be sent
+		// We trigger second beacon to be sent
 		BOOMR.plugins.RT.done();
 	}
 });

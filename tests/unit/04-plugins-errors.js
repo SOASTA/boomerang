@@ -4,6 +4,12 @@
 describe("BOOMR.plugins.Errors", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.plugins.Errors) {
+			return this.skip();
+		}
+	});
+
 	describe("exports", function() {
 		it("Should have a Errors object", function() {
 			assert.isObject(BOOMR.plugins.Errors);
@@ -477,7 +483,7 @@ describe("BOOMR.plugins.Errors", function() {
 				assert.strictEqual(BOOMR.plugins.Errors.BoomerangError.fromError(undefined), null);
 			});
 
-			it("Should return an object if given an Error", function() {
+			it("Should return an object if given an Error raised in an Anonymous function", function() {
 				var err;
 				var ln = 0;
 
@@ -501,7 +507,8 @@ describe("BOOMR.plugins.Errors", function() {
 				assert.strictEqual(be.count, 1);
 
 				if (be.fileName) {
-					assert.include(be.fileName, "04-plugins-errors");
+					// fails in IE10-11 and non-Chromium Edge due to bug in error plugin `parseV8OrIE`
+					assert.include(be.fileName, "04-plugins-errors.js");
 				}
 
 				// not all browsers will emit functionName
@@ -520,7 +527,54 @@ describe("BOOMR.plugins.Errors", function() {
 				assert.strictEqual(be.type, "Error");
 
 				if (be.stack) {
-					assert.include(be.stack, "Test");
+					assert.include(be.stack, "04-plugins-errors.js");
+					assert.include(be.stack, "mocha.js");
+				}
+			});
+
+			it("Should return an object if given an Error raised in a named function", function namedFunction() {
+				var err;
+				var ln = 0;
+
+				try {
+					throw new Error("Test");
+				}
+				catch (err2) {
+					err = err2;
+
+					// 6 lines up
+					ln = err.lineNumber ? (err.lineNumber - 6) : 0;
+				}
+
+				var be = BOOMR.plugins.Errors.BoomerangError.fromError(err, BOOMR.plugins.Errors.VIA_APP, BOOMR.plugins.Errors.SOURCE_APP);
+
+				// character count may differ amongst browsers
+				if (be.columnNumber) {
+					assert.closeTo(be.columnNumber, 15, 15);
+				}
+
+				assert.strictEqual(be.count, 1);
+
+				if (be.fileName) {
+					assert.include(be.fileName, "04-plugins-errors.js");  // fails in IE10-11 and non-Chromium Edge, is "http://boomerang-test.local:4002/vendor/mocha/mocha.js"
+				}
+
+				// not all browsers will emit functionName
+				if (be.functionName) {
+					assert.include(be.functionName, "namedFunction");
+				}
+
+				if (ln !== 0 && be.lineNumber) {
+					assert.closeTo(be.lineNumber, ln, 10);
+				}
+
+				assert.strictEqual(be.message, "Test");
+				assert.strictEqual(be.source, BOOMR.plugins.Errors.SOURCE_APP);
+				assert.strictEqual(be.type, "Error");
+
+				if (be.stack) {
+					assert.include(be.stack, "04-plugins-errors.js");
+					assert.include(be.stack, "mocha.js");
 				}
 			});
 

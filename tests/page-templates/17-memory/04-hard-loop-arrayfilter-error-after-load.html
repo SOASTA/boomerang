@@ -1,0 +1,55 @@
+<%= header %>
+<%= boomerangSnippet %>
+<script src="04-hard-loop-arrayfilter-error-after-load.js" type="text/javascript"></script>
+
+<!-- images: 3 total, 2 external, 1 unique external -->
+<img src="/assets/img.jpg" />
+<img src="/assets/img.jpg" />
+<picture>
+	<source media="(max-width: 766px)" srcset="/assets/img.jpg?source-in-picture1">
+	<img alt="gg" src="/assets/img.jpg?img-in-picture1">
+</picture>
+<picture>
+	<source media="(max-width: 766px)" srcset="/assets/img.jpg?source-in-picture2">
+	<img alt="gg" src="/assets/img.jpg?img-in-picture2">
+</picture>
+<picture>
+	<source media="(max-width: 766px)" srcset="/assets/img.jpg?source-in-picture3">
+	<img alt="gg" src="/assets/img.jpg?img-in-picture3">
+</picture>
+<!-- delay the page by 2 seconds so several errors can fire -->
+<img src="/delay?delay=2000&amp;file=/assets/img.jpg" style="width: 100px" />
+<link rel="canonical" href="/" />
+
+<script>
+BOOMR_test.init({
+	"BW": { "enabled": false },
+	"RT": { "session_exp": 1800 },
+	"Errors": {
+		"enabled": true,
+		"maxErrors": 10,
+		"sendAfterOnload": true,
+		"sendInterval": 10000
+	},
+	testAfterOnBeacon: false,
+	afterFirstBeacon: function() {
+		Object.defineProperty(HTMLImageElement.prototype, "src", {
+			get: function() {
+				// We force a JS error that will be later triggered by the Memory plugin
+				var a = b;
+
+				return (!this.src && !this.srcset) ? "" : this.pfCurrentSrc || "";
+			},
+			enumerable: true,
+			configurable: true
+		});
+
+		BOOMR.addError("Force error beacon", "BOOMRtest");
+
+		setTimeout(function() {
+			BOOMR_test.runTests();
+		}, 4000);
+	}
+});
+</script>
+<%= footer %>

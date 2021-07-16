@@ -1,6 +1,6 @@
 <%= header %>
 <!--
-Bug: t_domloaded is negative when XHR occurs between page's DOMContentLoaded and page's onLoad 
+Bug: t_domloaded is negative when XHR occurs between page's DOMContentLoaded and page's onLoad
 |************|*******************|++++++|******|
 ^navstart    ^DOMContentLoaded     ^XHR        ^onLoad
 -->
@@ -11,6 +11,9 @@ Bug: t_domloaded is negative when XHR occurs between page's DOMContentLoaded and
 
 BOOMR_test.init({
 	testAfterOnBeacon: 2,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	ResourceTiming: {
 		enabled: true
 	},

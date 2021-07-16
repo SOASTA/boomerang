@@ -21,7 +21,7 @@ BOOMR_test.templates.SPA["23-hard-wait-for-onload"] = function() {
 
 			assert.notEqual(b.nt_load_st, 0, "performance.timing.loadEventStart should not be 0");
 
-			assert.operator(b.t_done, ">=", b.nt_load_end - b.nt_nav_st);
+			assert.operator(b.t_done, ">=", b.nt_load_end - b.nt_nav_st - 1);  // in FF, the timings are rounded (may need to change this to -2)
 		}
 		else {
 			// should be greater than the 5s for the /blackhole request

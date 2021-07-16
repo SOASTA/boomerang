@@ -62,8 +62,9 @@ BOOMR_test.templates.SPA["17-wait"] = function() {
 			t.ifAutoXHR(
 				done,
 				function() {
+					var navStart = BOOMR.plugins.RT.navigationStart();
 					assert.operator(tf.beacons[i].t_done, ">=", 5000);
-					assert.operator(tf.beacons[i].t_done, "<", 5300);
+					assert.operator(tf.beacons[i].t_done, "<", window.spaWaitCompleteTimes[i - 1] - navStart + 200);
 					done();
 				},
 				this.skip.bind(this));
@@ -73,7 +74,7 @@ BOOMR_test.templates.SPA["17-wait"] = function() {
 			t.ifAutoXHR(
 				done,
 				function() {
-					assert.closeTo(tf.beacons[i]["rt.end"], window.spaWaitCompleteTimes[i - 1], 100);
+					assert.closeTo(tf.beacons[i]["rt.end"], window.spaWaitCompleteTimes[i - 1], 200);
 					done();
 				},
 				this.skip.bind(this));
@@ -95,8 +96,18 @@ BOOMR_test.templates.SPA["17-wait"] = function() {
 				t.ifAutoXHR(
 					done,
 					function() {
-						assert.operator(tf.beacons[i].t_done, ">=", 2000);
-						assert.operator(tf.beacons[i].t_done, "<", 2550);  // depending on app, could be up to 250ms xhr and 2s img
+						var b = tf.beacons[i], r, navStart = BOOMR.plugins.RT.navigationStart();
+
+						assert.operator(b.t_done, ">=", 2000);
+
+						if (t.isResourceTimingSupported() && typeof navStart !== "undefined") {
+							r = t.findFirstResource("support/img.jpg&id=2");
+							assert.operator(b["rt.end"], ">=", Math.floor(navStart + r.responseEnd));
+							assert.closeTo(b["rt.end"], Math.floor(navStart + r.responseEnd), 200);
+						}
+						else {
+							assert.operator(b.t_done, "<", 3000);  // depending on app, could be up to 250ms xhr and 2s img
+						}
 						done();
 					},
 					this.skip.bind(this));

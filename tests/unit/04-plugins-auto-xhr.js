@@ -4,6 +4,12 @@
 describe("BOOMR.plugins.AutoXHR", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.plugins.AutoXHR) {
+			return this.skip();
+		}
+	});
+
 	describe("exports", function() {
 		it("Should have a AutoXHR object", function() {
 			assert.isObject(BOOMR.plugins.AutoXHR);

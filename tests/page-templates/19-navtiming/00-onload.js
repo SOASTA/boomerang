@@ -164,7 +164,7 @@ describe("e2e/19-navtiming/00-onload", function() {
 	});
 
 	it("Should have set nt_first_paint via PaintTiming (if PaintTiming is supported and happened by load)", function() {
-		if (!t.isPaintTimingSupported()) {
+		if (!t.isPaintTimingSupported() || !BOOMR.plugins.PaintTiming) {
 			return this.skip();
 		}
 

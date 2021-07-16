@@ -31,6 +31,12 @@ app.run(["$location", "$timeout", function($location, $timeout) {
 			// this xhr should match the exclude filter
 			var xhr = new XMLHttpRequest();
 			xhr.open("GET", "/pages/05-angular/support/img.jpg?rnd=" + Math.random());
+			// create an interesting MO event
+			xhr.addEventListener("load", function() {
+				var img = window.document.createElement("img");
+				img.src = "/assets/img.jpg?rnd" + Math.random();
+				window.document.body.appendChild(img);
+			});
 			xhr.send(null);
 
 			// wait 5 seconds then go to the next page

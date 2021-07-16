@@ -98,6 +98,8 @@
 	var doNotTestErrorsParam = false;
 	var doNotTestSpaAbort = false;
 
+	var actions = [];
+
 	// test framework
 	var assert;
 
@@ -531,13 +533,26 @@
 		return (" " + document.cookie + ";").indexOf(" " + testCookieName + "=") !== -1;
 	};
 
-	t.clearCookies = function(domain) {
-		var date = new Date();
+	/**
+	 * @param {String} [domain]
+	 * @param {String} [samesite] - Ignored when not HTTPS for now
+	 */
+	t.clearCookies = function(domain, samesite) {
+		var date = new Date(), cookie;
 		date.setTime(date.getTime() - (24 * 60 * 60 * 1000));
 		var cookies = document.cookie.split(";");
 		for (var i = 0; i < cookies.length; i++) {
 			var name = cookies[i].split("=")[0].replace(/^\s+|\s+$/g, "");  // trim spaces
-			document.cookie = [name + "=", "expires=" + date.toGMTString(), "path=/", "domain=" + (domain || location.hostname)].join("; ");
+			cookie = [name + "=", "expires=" + date.toGMTString(), "path=/", "domain=" + (domain || location.hostname)];
+			if (location.protocol === "https:") {
+				// this doesn't check that the browser is compatible
+				cookie.push("secure");
+
+				if (samesite) {
+					cookie.push("samesite=" + samesite);
+				}
+			}
+			document.cookie = cookie.join(";");
 		}
 	};
 
@@ -567,15 +582,27 @@
 
 	t.clearLocalStorage = function() {
 		// Clear localStorage
-		if (typeof window.localStorage === "object" && typeof window.localStorage.clear === "function") {
-			window.localStorage.clear();
+		try {
+			if (typeof window.localStorage === "object" && typeof window.localStorage.clear === "function") {
+				window.localStorage.clear();
+			}
+		}
+		catch (e) {
+			// can fail in incognito mode
+			console.error("Clearing local storage failed", e);
 		}
 	};
 
 	t.clearSessionStorage = function() {
 		// Clear sessionStorage
-		if (typeof window.sessionStorage === "object" && typeof window.sessionStorage.clear === "function") {
-			window.sessionStorage.clear();
+		try {
+			if (typeof window.sessionStorage === "object" && typeof window.sessionStorage.clear === "function") {
+				window.sessionStorage.clear();
+			}
+		}
+		catch (e) {
+			// can fail in incognito mode
+			console.error("Clearing session storage failed", e);
 		}
 	};
 
@@ -1011,177 +1038,6 @@
 	};
 
 	/**
-	 * Validates an early beacon against the load beacon
-	 */
-	t.validateEarlyBeacon = function(early, normal) {
-		var i, field, timer, timers, early_timers = {}, normal_timers = {};
-
-		// Don't test h.pg, we'll do some magic in the tests to make sure page params runs twice
-
-		// Not yet tested:
-		// "vis.st",
-		// "dom.res",
-		// "dom.doms",
-		// "mem.total",
-		// "mem.limit",
-		// "mem.used",
-		// "scr.xyv",
-		// "scr.bpp",
-		// "scr.orn",
-		// "scr.dpx",
-		// "cpu.cnc",
-		// "bat.lvl",
-		// "dom.ln",
-		// "dom.sz",
-		// "dom.img",
-		// "dom.script",
-		// "dom.script.ext",
-		// "dom.iframe",
-		// "dom.iframe.ext",
-		// "dom.link",
-
-		// fields that should be the same on both beacons
-		var fieldsEqual = [
-			"h.key",
-			"rt.start",
-			"rt.bmr",
-			"rt.tstart",
-			"rt.nstart",
-			"rt.bstart",
-			"rt.blstart",
-			"rt.si",
-			"rt.ss",
-			"rt.sstr_dur",
-			"rt.sstr_to",
-			"v",
-			"pid",
-			"ua.plt",
-			"ua.vnd",
-			"u",
-			"nt_red_cnt",
-			"nt_nav_type",
-			"nt_nav_st",
-			"nt_red_st",
-			"nt_red_end",
-			"nt_fet_st",
-			"nt_dns_st",
-			"nt_dns_end",
-			"nt_con_st",
-			"nt_con_end",
-			"nt_req_st",
-			"nt_res_st",
-			"nt_res_end",
-			"nt_domloading",
-			"nt_domint",
-			"nt_domcontloaded_st",
-			"nt_domcontloaded_end",
-			"nt_unload_st",
-			"nt_unload_end",
-			"nt_domcomp",
-			"nt_load_st",
-			"nt_load_end",  // load could have ended in the case of SPA hard
-			"nt_first_paint",
-			"nt_spdy",
-			"nt_cinf",
-			"if",
-			"vis.pre",
-			"t_configls",
-			"t_domloaded",
-			"t_load",
-			"t_prerender",
-			"t_postrender"
-		];
-
-		// fields that should not be on early beacon
-		var fieldsUndefined = [
-			// no page load timing available yet
-			"t_resp",
-			"t_page",
-			"t_done",
-			"restiming"  // no restiming on early beacons
-		];
-
-		// fields that should be the same on both beacons if available
-		var fieldsEqualIfExists = [
-			"rt.cnf",  // may not be there if config loaded from localStorage
-			"t_configfb",
-			"t_configjs"
-		];
-
-		// fields that must be on the early beacon
-		var fieldsMustExist = [
-			"rt.end",
-			"rt.tt",
-			"early"
-		];
-
-		for (i = 0; i < fieldsEqual.length; i++) {
-			field = fieldsEqual[i];
-			if (field.indexOf("nt_") === 0 && (!(field in early) || early[field] === 0)) {
-				// nav timing fields may be 0 or missing on the early beacon
-				continue;
-			}
-			if (typeof normal[field] === "undefined") {
-				assert.isUndefined(early[field], field + " must not be on early beacon if not on the load beacon");
-			}
-			else {
-				assert.equal(normal[field], early[field], field + " " + normal[field] + " === " +  early[field]);
-			}
-		}
-
-		for (i = 0; i < fieldsUndefined.length; i++) {
-			field = fieldsUndefined[i];
-			assert.isUndefined(early[field], field + " must not be on early beacon");
-		}
-
-		for (i = 0; i < fieldsEqualIfExists.length; i++) {
-			field = fieldsEqualIfExists[i];
-			if (typeof early[field] !== "undefined") {
-				assert.equal(normal[field], early[field], field + " " + normal[field] + " === " +  early[field]);
-			}
-		}
-
-		for (i = 0; i < fieldsMustExist.length; i++) {
-			field = fieldsMustExist[i];
-			assert.isDefined(early[field], field + " must exist");
-		}
-
-		// rt.sl should be 1 less on the early beacon
-		assert.equal(parseInt(normal["rt.sl"], 10), parseInt(early["rt.sl"], 10) + 1,
-		    "session length " + normal["rt.sl"] + " === " +  early["rt.sl"] + " + 1");
-
-		// rt.obo should be equal or 1 more on the normal beacon (if navtiming not supported)
-		if (early["rt.obo"] !== normal["rt.obo"] && (parseInt(early["rt.obo"], 10) + 1) !== parseInt(normal["rt.obo"], 10)) {
-			assert.fail("rt.obo must be equal or 1 more on normal beacon");
-		}
-
-		// t_other, if a timer is on the early beacon then it must be on the normal beacon
-		if (early.t_other) {
-			if (normal.t_other) {
-				normal_timers = this.parseTimers(normal.t_other);
-				early_timers = this.parseTimers(early.t_other);
-
-				for (timer in early_timers) {
-					if (early_timers.hasOwnProperty(timer)) {
-						if (timer.indexOf("custom") === 0) {
-							//custom timers may get longer (eg. ResourceGroups matching several resources)
-							assert.operator(normal_timers[timer], ">=", early_timers[timer],
-						    "t_other  " + timer + " " + normal_timers[timer] + " >= " +  early_timers[timer]);
-						}
-						else {
-							assert.equal(normal_timers[timer], early_timers[timer],
-							    "t_other  " + timer + " " + normal_timers[timer] + " === " +  early_timers[timer]);
-						}
-					}
-				}
-			}
-			else {
-				assert.fail("t_other on early beacon but missing on the normal beacon");
-			}
-		}
-	};
-
-	/**
 	 * Determines the user agent is Internet Explorer or not
 	 *
 	 * @returns {boolean} True if the user agent is Internet Explorer
@@ -1491,8 +1347,266 @@
 		});
 	};
 
+	/**
+	 * Gets the current site domain (from location.hostname)
+	 *
+	 * @returns {string} Site siteDomain
+	 */
 	t.siteDomain = function() {
 		return window.location.hostname.replace(/.*?([^.]+\.[^.]+)\.?$/, "$1").toLowerCase();
+	};
+
+	/**
+	 * Sets the list of actions (callback functions). Actions are triggered by `queueAction()`
+	 *
+	 * @param {function[]} _actions - List of callback action functions
+	 */
+	t.setActions = function(_actions) {
+		actions = _actions;
+	};
+
+	/**
+	 * Queues the next action in the list.
+	 * If `node` is given then wait for the node's onload else call the action immediately
+	 *
+	 * @param {HTMLElement} [node]
+	 */
+	t.queueAction = function(node) {
+		var action = actions.shift();
+		if (!action) {
+			return;
+		}
+
+		if (node) {
+			// if we have a node, wait for it's onload event
+			var listener = function() {
+				node.removeEventListener("load", listener);
+				action();
+			};
+			node.addEventListener("load", listener);
+		}
+		else {
+			action();
+		}
+	};
+
+	/**
+	 * Helper function to fetch resources to test AutoXHR/SPA functionality.
+	 * Request waterfall:
+	 *     xxxxx (tracked xhr)
+	 *          x (sub-img1)
+	 *     xxxxxxxxxx (un-tracked xhr)
+	 *               x (sub-img2)
+	 *     x (main-img)
+	 *
+	 * @param {boolean} useFetch - Use Fetch API else use XHR
+	 */
+	t.resources = (function() {
+		var imgs = ["resources-main-img", "resources-sub-img1", "resources-sub-img"],
+		    resourcesCallCount = 0;
+
+		function getURI(id, delay) {
+			return "/delay?id=" + id + "-" + resourcesCallCount + "&delay=" + delay + "&file=/assets/img.jpg&rnd=" + Math.random();
+		}
+
+		return function(useFetch) {
+			if (resourcesCallCount === 0) {
+				// setup imgs used for MO events
+				for (var i = 0; i < imgs.length; i++) {
+					var img = document.getElementById(imgs[i]);
+					if (!img) {
+						img = new Image();
+						img.id = imgs[i];
+						img.src = "";
+						img.style = "width:100px;height:100px;";
+						document.body.appendChild(img);
+					}
+				}
+			}
+			resourcesCallCount++;
+
+			if (useFetch) {
+				// at least 1s longer than main-image so that if fetch instrumentation is off or bugs out then the MO is later than the spa timeout
+				var f = fetch(getURI("fetch-track", 1500));
+				f.then(function(response) {
+					response.text();
+					var img1 = document.getElementById(imgs[1]);
+					img1.src = "";
+					img1.src = getURI(imgs[1], 200);
+				});
+
+				// slow fetch request that isn't tracked (ignore rule)
+				var f2 = fetch(getURI("fetch-ignore", 3000));
+				f2.then(function(response) {
+					response.text();
+					var img2 = document.getElementById(imgs[2]);
+					img2.src = "";
+					img2.src = getURI(imgs[2], 200);
+
+					// img2 will be the last resource loaded. Queue the next action
+					t.queueAction(img2);
+				});
+			}
+			else {
+				var xhr = new XMLHttpRequest();
+				// at least 1s longer than main-image so that if xhr instrumentation is off or bugs out then the MO is later than the spa timeout
+				xhr.open("GET", getURI("xhr-track", 1500));
+				xhr.send(null);
+				xhr.onreadystatechange = function() {
+					if (xhr.readyState === 4 && xhr.status === 200) {
+						var img1 = document.getElementById(imgs[1]);
+						img1.src = "";
+						img1.src = getURI(imgs[1], 200);
+					}
+				};
+
+				// slow xhr request that isn't tracked (ignore rule)
+				var xhr2 = new XMLHttpRequest();
+				xhr2.open("GET", getURI("xhr-ignore", 3000));
+				xhr2.send(null);
+				xhr2.onreadystatechange = function() {
+					if (xhr2.readyState === 4 && xhr2.status === 200) {
+						var img2 = document.getElementById(imgs[2]);
+						img2.src = "";
+						img2.src = getURI(imgs[2], 200);
+
+						// img2 will be the last resource loaded. Queue the next action
+						t.queueAction(img2);
+					}
+				};
+			}
+
+			var img = document.getElementById(imgs[0]);
+			img.src = "";  // visual feedback when running tests manually
+			img.src = getURI(imgs[0], 200);
+		};
+	})();
+
+	//
+	// Dynamic content addition functions
+	//
+
+	// Array of XHR timestamps
+	t.xhrTimes = [];
+
+	/**
+	 * Creates a new XHR that will take around the time specified
+	 *
+	 * @param {string} id XHR ID (will be included in the URL)
+	 * @param {number} delay Delay (milliseconds)
+	 * @param {function} onComplete Callback
+	 */
+	t.xhrDelayed = function(id, delay, onComplete) {
+		var xhr = new XMLHttpRequest();
+
+		xhr.open("GET", "/delay?id=" + id + "&delay=" + delay + "&file=/assets/img.jpg&rnd=" + t.rnd36(), true);
+
+		xhr.onreadystatechange = function() {
+			if (xhr.readyState === 4) {
+				// update timings
+				xhr.timing.end = BOOMR.now();
+				xhr.timing.duration = xhr.timing.end - xhr.timing.start;
+
+				return onComplete && onComplete(xhr);
+			}
+		};
+
+		// save timestamp
+		xhr.timing = {
+			start: BOOMR.now()
+		};
+
+		// add as both index and id
+		t.xhrTimes.push(xhr.timing);
+		t.xhrTimes[id] = xhr.timing;
+
+		xhr.send(null);
+	};
+
+	// Array of Image timestamps
+	t.imgTimes = [];
+
+	/**
+	 * Creates a new IMG that will be added to the DOM and will take around the time specified
+	 *
+	 * @param {string} id IMG ID (will be included in the URL)
+	 * @param {number} delay Delay (milliseconds)
+	 */
+	t.imgIntoDomDelayed = function(id, delay) {
+		var img = document.createElement("IMG");
+		img.src = "/delay?id=" + id + "&delay=" + delay + "&file=/assets/img.jpg?rnd=" + t.rnd36();
+		img.onload = function() {
+			// update timings
+			img.timing.end = BOOMR.now();
+			img.timing.duration = img.timing.end - img.timing.start;
+		};
+
+		img.timing = {
+			start: BOOMR.now()
+		};
+
+		// add as both index and id
+		t.imgTimes.push(img.timing);
+		t.imgTimes[id] = img.timing;
+
+		document.body.appendChild(img);
+	};
+
+	// Array of mouse event timestamps
+	t.mouseEventTimes = [];
+
+	/**
+	 * Fires a new mouse event on the page
+	 *
+	 * @param {string} etype Event type
+	 */
+	t.fireMouseEvent = function(etype) {
+		var clickable = document.getElementById("clickable");
+		if (!clickable) {
+			clickable = document.createElement("DIV");
+			document.body.appendChild(clickable);
+		}
+
+		// save timestamp
+		t.mouseEventTimes.push(BOOMR.now());
+
+		if (clickable.fireEvent) {
+			clickable.fireEvent("on" + etype);
+		}
+		else {
+			var evObj = document.createEvent("MouseEvent");
+			evObj.initEvent(etype, true, false);
+			clickable.dispatchEvent(evObj);
+		}
+
+		window.eventFired = true;
+	};
+
+	// Array of route change times
+	t.routeChangeTimes = [];
+
+	/**
+	 * Triggers a new route change via the History API to a random URL
+	 *
+	 * @param {string} name Route name (will have a random string appended)
+	 */
+	t.routeChangeRnd = function(name) {
+		if (window.history &&
+		    typeof history.pushState === "function") {
+			// save timestamp
+			t.routeChangeTimes.push(BOOMR.now());
+
+			history.pushState({}, "", "#" + name + "-" + t.rnd36());
+		}
+	};
+
+	/**
+	 * Gets a random number Base36 (1 trillion possibilities)
+	 *
+	 * @returns {string} Random number (Base36)
+	 */
+	t.rnd36 = function() {
+		return Math.round(Math.random() * 999999999999).toString(36);
 	};
 
 	window.BOOMR_test = t;

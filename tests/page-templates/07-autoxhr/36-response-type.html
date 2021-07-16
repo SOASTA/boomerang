@@ -4,6 +4,9 @@
 <script>
 BOOMR_test.init({
 	testAfterOnBeacon: (typeof window.XMLHttpRequest !== "undefined") ? 3 : 1,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	afterFirstBeacon: function() {
 		if (!BOOMR.plugins.AutoXHR) {
 			return;

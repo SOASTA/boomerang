@@ -14,8 +14,11 @@ function addDiv() {
 setTimeout(addDiv, 200);
 
 BOOMR_test.init({
-	"instrument_xhr": true,
 	testAfterOnBeacon: (BOOMR.plugins.AutoXHR) ? 8 : 1,
+	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	afterFirstBeacon:
 		function() {
 			if (!BOOMR.plugins.AutoXHR) {

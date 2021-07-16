@@ -26,10 +26,11 @@ BOOMR_test.templates.SPA["25-delayed-boomerang-pre-config-snippet"] = function()
 	it("Should have had the second beacon was an xhr beacon", function() {
 		var b = tf.beacons[1];
 		assert.equal(b["http.initiator"], "xhr");
-		assert.equal(b["rt.tstart"], 5);
+		assert.equal(b["rt.tstart"], window.timestamp + 5);
 		assert.equal(b["rt.start"], "manual");
 		assert.equal(b.t_resp, 5);
-		assert.equal(b.t_done, 5);
+		assert.equal(b.t_page, 1);
+		assert.equal(b.t_done, 6);
 		assert.equal(b.u, "http://foo.com/xhr/");
 		assert.include(b.pgu, "25-delayed-boomerang-pre-config-snippet.html");
 	});

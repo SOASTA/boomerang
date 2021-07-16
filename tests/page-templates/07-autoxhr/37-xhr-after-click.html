@@ -31,6 +31,9 @@ var eventFired = false;
 BOOMR_test.init({
 	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 2 : 1,
 	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	ResourceTiming: {
 		enabled: true
 	},

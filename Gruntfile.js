@@ -9,6 +9,7 @@ var path = require("path");
 var fse = require("fs-extra");
 var stripJsonComments = require("strip-json-comments");
 var grunt = require("grunt");
+var async = require("async");
 
 
 //
@@ -28,10 +29,11 @@ var BUILD_PATH = "build";
 var TEST_BUILD_PATH = path.join("tests", "build");
 var TEST_RESULTS_PATH = path.join("tests", "results");
 var TEST_DEBUG_PORT = parseInt(grunt.option("test-port")) || 4002;
-var TEST_URL_BASE = grunt.option("test-url") || "http://" + boomerangE2ETestDomain + ":" + TEST_DEBUG_PORT;
+var TEST_SCHEME = grunt.option("test-scheme") || "http";
+var TEST_URL_BASE = grunt.option("test-url") || TEST_SCHEME + "://" + boomerangE2ETestDomain + ":" + TEST_DEBUG_PORT;
 
 var SELENIUM_ADDRESS = grunt.option("selenium-address") || "http://" + boomerangE2ETestDomain + ":4444/wd/hub";
-var E2E_BASE_URL = "http://" + boomerangE2ETestDomain + ":" + TEST_DEBUG_PORT + "/";
+var E2E_BASE_URL = TEST_SCHEME + "://" + boomerangE2ETestDomain + ":" + TEST_DEBUG_PORT + "/";
 
 var DEFAULT_BROWSER = grunt.option("test-browser") || "ChromeHeadless";
 
@@ -82,10 +84,22 @@ function fileForHtml(file) {
 		.replace(/>/g, "&gt;");
 }
 
+/**
+ * Gets the build configuration
+ */
+function getBuildConfig() {
+	var buildConfig = {
+		server: grunt.option("server") || DEFAULT_TEST_MAIN_DOMAIN || "localhost",
+		beaconUrlsAllowed: grunt.option("beacon-urls-allowed") || ""
+	};
+
+	return buildConfig;
+}
+
 //
 // Grunt config
 //
-module.exports = function() {
+function getConfig() {
 	//
 	// Paths
 	//
@@ -96,13 +110,64 @@ module.exports = function() {
 	var snippetsDir = path.join(__dirname, "snippets");
 
 	//
+	// Build numbers
+	//
+	var pkg = grunt.file.readJSON("package.json");
+	var buildNumber = grunt.option("build-number") || 0;
+	var releaseVersion = pkg.releaseVersion + "." + buildNumber;
+	var buildRevision = grunt.option("build-revision") || 0;
+	var buildSuffix = grunt.option("build-suffix") ? (grunt.option("build-suffix") + ".") : "";
+	var buildFlavor = grunt.option("build-flavor") || "";
+
+	if (buildFlavor) {
+		buildSuffix = buildFlavor + "." + buildSuffix;
+	}
+
+	//
 	// Determine source files:
 	//  boomerang.js and plugins/*.js order
 	//
 	var src = [ "boomerang.js" ];
+
+	// default plugins
 	var plugins = grunt.file.readJSON("plugins.json");
-	src.push(plugins.plugins);
+
+	// allow overwriting with user plugins (plugins.user.json)
+	try {
+		var userPlugins = grunt.file.readJSON("plugins.user.json");
+		if (userPlugins.plugins) {
+			// use the user plugins instead
+			grunt.log.ok("Using plugins.user.json");
+
+			plugins = userPlugins;
+		}
+	}
+	catch (e) {
+		// NOP
+	}
+
+	// use a specific flavor
+	if (buildFlavor) {
+		if (!plugins.flavors[buildFlavor]) {
+			return grunt.fail.fatal("Build flavor " + buildFlavor + " does not exist");
+		}
+
+		grunt.log.ok("Building flavor: " + buildFlavor + " with " + plugins.flavors[buildFlavor].plugins.length +
+			" plugins: " + JSON.stringify(plugins.flavors[buildFlavor].plugins));
+
+		src.push(plugins.flavors[buildFlavor].plugins);
+
+		buildRevision = plugins.flavors[buildFlavor].revision;
+	}
+	else {
+		src.push(plugins.plugins);
+	}
+
+	// always the last plugin
 	src.push(path.join(pluginsDir, "zzz-last-plugin.js"));
+
+	// calculate version string
+	var boomerangVersion = releaseVersion + "." + buildRevision;
 
 	//
 	// Snippets
@@ -129,7 +194,7 @@ module.exports = function() {
 
 	// load the env.json or default content
 	if (fs.existsSync(envFile)) {
-		env = grunt.file.readJSON("tests/server/env.json");
+		env = grunt.file.readJSON(envFile);
 	}
 	else {
 		// default content
@@ -162,16 +227,6 @@ module.exports = function() {
 	}
 
 	//
-	// Build numbers
-	//
-	var pkg = grunt.file.readJSON("package.json");
-	var buildNumber = grunt.option("build-number") || 0;
-	var releaseVersion = pkg.releaseVersion + "." + buildNumber;
-	var buildRevision = grunt.option("build-revision") || 0;
-	var boomerangVersion = releaseVersion + "." + buildRevision;
-	var buildSuffix = grunt.option("build-suffix") ? (grunt.option("build-suffix") + ".") : "";
-
-	//
 	// Output files
 	//
 
@@ -200,19 +255,28 @@ module.exports = function() {
 	//
 	// Build configuration
 	//
-	var buildConfig = {
-		server: grunt.option("server") || DEFAULT_TEST_MAIN_DOMAIN || "localhost",
-		beaconUrlsAllowed: grunt.option("beacon-urls-allowed") || ""
-	};
+	var buildConfig = getBuildConfig();
 
 	var bannerFilePathRelative = "./lib/banner.txt";
 	var bannerFilePathAbsolute = path.resolve(bannerFilePathRelative);
 	var bannerString = grunt.file.read(bannerFilePathAbsolute);
 
-	//
-	// Config
-	//
-	grunt.initConfig({
+	// Load perf test tasks
+	if (fs.existsSync(perfTestsDir)) {
+		// The perf tests use NodeJS 8+ features such as async/await and util.promisify
+		var nodeVersionMajor = Number(process.version.match(/^v(\d+)\.\d+/)[1]);
+
+		if (nodeVersionMajor >= 8) {
+			grunt.registerTask("perf-tests", "Tests Performance", require("./tests/perf/perf-tests"));
+			grunt.registerTask("perf-compare", "Compares current Performance to Baseline", require("./tests/perf/perf-compare"));
+		}
+		else {
+			grunt.log.writeln("Warning: Node version " + process.version + " does not support async or util.promisify, used by perf tests.");
+			grunt.log.writeln("Use NodeJS 8+ to run perf tests.");
+		}
+	}
+
+	return {
 		// package info
 		pkg: pkg,
 
@@ -275,7 +339,14 @@ module.exports = function() {
 		mkdir: {
 			test: {
 				options: {
+					mode: "0777",
 					create: [TEST_RESULTS_PATH]
+				}
+			},
+			build: {
+				options: {
+					mode: "0777",
+					create: [BUILD_PATH]
 				}
 			}
 		},
@@ -874,36 +945,30 @@ module.exports = function() {
 				noColor: false,
 				keepAlive: false
 			},
+
 			PhantomJS: {
 				options: {
-					configFile: "tests/protractor.config.phantom.js",
+					configFile: "tests/protractor-config/phantom.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
-						baseUrl: E2E_BASE_URL,
-						capabilities: {
-							browserName: "phantomjs",
-							"phantomjs.binary.path": require("phantomjs").path
-						}
+						baseUrl: E2E_BASE_URL
 					}
 				}
 			},
 			Chrome: {
 				options: {
-					configFile: "tests/protractor.config.chrome.js",
+					configFile: "tests/protractor-config/chrome.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
-						baseUrl: E2E_BASE_URL,
-						capabilities: {
-							browserName: "chrome"
-						}
+						baseUrl: E2E_BASE_URL
 					}
 				}
 			},
 			ChromeHeadless: {
 				options: {
-					configFile: "tests/protractor.config.chromeheadless.js",
+					configFile: "tests/protractor-config/chromeheadless.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -913,7 +978,7 @@ module.exports = function() {
 			},
 			Firefox: {
 				options: {
-					configFile: "tests/protractor.config.firefox.js",
+					configFile: "tests/protractor-config/firefox.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -923,7 +988,7 @@ module.exports = function() {
 			},
 			FirefoxHeadless: {
 				options: {
-					configFile: "tests/protractor.config.firefoxheadless.js",
+					configFile: "tests/protractor-config/firefoxheadless.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -933,7 +998,7 @@ module.exports = function() {
 			},
 			Edge: {
 				options: {
-					configFile: "tests/protractor.config.edge.js",
+					configFile: "tests/protractor-config/edge.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -943,7 +1008,7 @@ module.exports = function() {
 			},
 			IE: {
 				options: {
-					configFile: "tests/protractor.config.ie.js",
+					configFile: "tests/protractor-config/ie.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -953,7 +1018,7 @@ module.exports = function() {
 			},
 			Safari: {
 				options: {
-					configFile: "tests/protractor.config.safari.js",
+					configFile: "tests/protractor-config/safari.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e.js"],
@@ -963,7 +1028,7 @@ module.exports = function() {
 			},
 			debug: {
 				options: {
-					configFile: "tests/protractor.config.debug.js",
+					configFile: "tests/protractor-config/debug.js",
 					args: {
 						seleniumAddress: SELENIUM_ADDRESS,
 						specs: ["tests/e2e/e2e-debug.js"],
@@ -987,13 +1052,15 @@ module.exports = function() {
 			},
 			dev: {
 				options: {
-					script: "tests/server/app.js"
+					script: "tests/server/app.js",
+					args: [ TEST_SCHEME || "http" ]
 				}
 			},
-			"secondary": {
+			secondary: {
 				options: {
 					script: "tests/server/app.js",
-					port: (TEST_DEBUG_PORT + 1)
+					port: (TEST_DEBUG_PORT + 1),
+					args: [ TEST_SCHEME || "http" ]
 				}
 			},
 			doc: {
@@ -1098,8 +1165,47 @@ module.exports = function() {
 				],
 				tasks: ["clean", "jsdoc", "doc-source-code"]
 			}
+		},
+		shell: {
+			"generate-certificate": {
+				stdin: true,
+				command: [
+					"echo '[req]\ndistinguished_name=req\n[san]\nsubjectAltName=DNS:" + DEFAULT_TEST_MAIN_DOMAIN + ",DNS:" + DEFAULT_TEST_SECONDARY_DOMAIN + "'",
+					"|",
+					"openssl req",
+					"-x509",
+					"-newkey rsa:4096",
+					"-sha256",
+					"-days 3560",
+					"-nodes",
+					"-keyout tests/server/certs/" + DEFAULT_TEST_MAIN_DOMAIN + ".pem",
+					"-out tests/server/certs/" + DEFAULT_TEST_MAIN_DOMAIN + ".crt",
+					"-subj '/CN=" + DEFAULT_TEST_MAIN_DOMAIN + "'",
+					"-extensions san",
+					"-config /dev/stdin"
+				].join(" ")
+			}
 		}
-	});
+	};
+}
+
+//
+// Grunt call
+//
+module.exports = function() {
+	//
+	// Paths
+	//
+	var testsDir = path.join(__dirname, "tests");
+	var perfTestsDir = path.join(testsDir, "perf");
+	var pageTemplateSnippetsDir = path.join(testsDir, "page-template-snippets");
+	var pluginsDir = path.join(__dirname, "plugins");
+	var snippetsDir = path.join(__dirname, "snippets");
+	//
+	// Config
+	//
+	grunt.initConfig(getConfig());
+	var buildConfig = getBuildConfig();
 
 	grunt.loadNpmTasks("gruntify-eslint");
 	grunt.loadNpmTasks("grunt-babel");
@@ -1122,6 +1228,7 @@ module.exports = function() {
 	grunt.loadNpmTasks("grunt-contrib-watch");
 	grunt.loadNpmTasks("grunt-jsdoc");
 	grunt.loadNpmTasks("grunt-githash");
+	grunt.loadNpmTasks("grunt-shell");
 
 	// tasks/*.js
 	if (grunt.file.exists("tasks")) {
@@ -1149,22 +1256,6 @@ module.exports = function() {
 			path.join(testsDir, "perf", "scenarios.json")
 		);
 	});
-
-
-	// Load perf test tasks
-	if (fs.existsSync(perfTestsDir)) {
-		// The perf tests use NodeJS 8+ features such as async/await and util.promisify
-		var nodeVersionMajor = Number(process.version.match(/^v(\d+)\.\d+/)[1]);
-
-		if (nodeVersionMajor >= 8) {
-			grunt.registerTask("perf-tests", "Tests Performance", require("./tests/perf/perf-tests"));
-			grunt.registerTask("perf-compare", "Compares current Performance to Baseline", require("./tests/perf/perf-compare"));
-		}
-		else {
-			grunt.log.writeln("Warning: Node version " + process.version + " does not support async or util.promisify, used by perf tests.");
-			grunt.log.writeln("Use NodeJS 8+ to run perf tests.");
-		}
-	}
 
 	// Custom aliases for configured grunt tasks
 	var aliases = {
@@ -1360,4 +1451,185 @@ module.exports = function() {
 		delete grunt.config.data.watch.doc;
 		grunt.task.run("watch");
 	});
+
+	//
+	// build:flavors
+	//
+	grunt.registerTask("build:flavors", function() {
+		var done = this.async();
+
+		// config
+		var buildNumber = grunt.option("build-number") || 0;
+		if (buildNumber === 0) {
+			grunt.fail.fatal("--build-number must be specified");
+		}
+
+		runForEachFlavor(
+			"build",
+			"build",
+			[
+				"--build-number=" + buildNumber
+			],
+			true,
+			done);
+	});
+
+	//
+	// test:unit:flavors
+	//
+	grunt.registerTask("test:unit:flavors", function() {
+		var done = this.async();
+
+		runForEachFlavor(
+			"test-unit",
+			"test:unit",
+			[],
+			false,
+			done);
+	});
+
+	//
+	// test:e2e:flavors
+	//
+	grunt.registerTask("test:e2e:flavors", function() {
+		var done = this.async();
+
+		// protractor_webdriver should've already been started so we can reuse it
+		grunt.task.requires("protractor_webdriver");
+
+		runForEachFlavor(
+			"test-e2e",
+			"test:e2e",
+			[
+				"--selenium-address=" + SELENIUM_ADDRESS
+			],
+			false,
+			done);
+	});
 };
+
+/**
+ * Runs the specific task for each build flavor
+ *
+ * @param {string} logName Log file name
+ * @param {string} taskName Grunt task name
+ * @param {string[]} args Grunt command-line arguments
+ * @param {boolean} failOnError Fail on error
+ * @param {function} done Callback
+ */
+function runForEachFlavor(logName, taskName, args, failOnError, done) {
+	// get all plugin definitions
+	var plugins = grunt.file.readJSON("plugins.json");
+
+	var pkg = grunt.file.readJSON("package.json");
+	var buildNumber = grunt.option("build-number") || 0;
+	var releaseVersion = pkg.releaseVersion + "." + buildNumber;
+
+	var flavorList = [];
+
+	// Add the base "full" version as its also a flavor.
+	flavorList.push(releaseVersion + ".0");
+
+	// Build list of all flavor version codes in this release
+	for (var f in plugins.flavors) {
+		if (!plugins.flavors.hasOwnProperty(f)) {
+			continue;
+		}
+
+		var buildFlavor = plugins.flavors[f];
+		flavorList.push(releaseVersion + "." + buildFlavor.revision);
+	}
+
+	// output log
+	var outputLogFile = path.join("build", logName + ".full.log");
+	var outputLogStream = fs.createWriteStream(outputLogFile, {
+		flags: "a"
+	});
+
+	grunt.log.ok("Running " + taskName + " on full build");
+
+	// Let the environment know the flavor
+	process.env.BUILD_FLAVOR = "full";
+
+	var argsWithTask = args.concat(taskName);
+	var argsWithTaskAndFlavors = argsWithTask.concat([
+		"--parent-flavor-version=" + releaseVersion + ".0",
+		"--is-parent-flavor=true",
+		"--is-child-flavor=false"
+	]);
+	//
+	// Full build
+	//
+	var child = grunt.util.spawn({
+		grunt: true,
+		args: argsWithTaskAndFlavors
+	}, function(error, result, code) {
+		outputLogStream.close();
+
+		if (error) {
+			logSpawnError(error, result);
+
+			if (failOnError) {
+				grunt.fail.fatal("Build failed");
+
+				return done("Build failed");
+			}
+		}
+
+		// set parent flavor version
+		var argsWithTaskAndPVersion = argsWithTask.concat([
+			"--parent-flavor-version=" + releaseVersion + ".0",
+			"--is-parent-flavor=false",
+			"--is-child-flavor=true"
+		]);
+		//
+		// Each flavor
+		//
+		async.eachSeries(Object.keys(plugins.flavors), function(flavor, cb) {
+			// Let the environment know the flavor
+			process.env.BUILD_FLAVOR = flavor;
+
+			// output log
+			outputLogFile = path.join("build", logName + "." + flavor + ".log");
+			outputLogStream = fs.createWriteStream(outputLogFile, {
+				flags: "a"
+			});
+
+			grunt.log.ok("Running " + taskName + " on " + flavor);
+
+			var child2 = grunt.util.spawn({
+				grunt: true,
+				args: argsWithTaskAndPVersion.concat("--build-flavor=" + flavor)
+			}, function(errorFlavor, resultFlavor) {
+				outputLogStream.close();
+
+				if (errorFlavor) {
+					logSpawnError(errorFlavor, resultFlavor);
+				}
+
+				cb((failOnError && errorFlavor) ? ("Error with " + flavor) : undefined);
+			});
+
+			child2.stdout.pipe(outputLogStream);
+			child2.stderr.pipe(outputLogStream);
+		}, done);
+	});
+
+	child.stdout.pipe(outputLogStream);
+	child.stderr.pipe(outputLogStream);
+}
+
+function logSpawnError(error, result) {
+	// Log output
+	console.log(error);
+
+	if (result.stderr) {
+		console.error("********* stderr *********");
+		console.error(result.stderr);
+	}
+
+	if (result.stdout) {
+		console.error("********* stdout *********");
+		console.error(result.stdout);
+	}
+}

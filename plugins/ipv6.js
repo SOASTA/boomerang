@@ -182,8 +182,8 @@
 
 			if (!impl.ipv6_url) {
 				BOOMR.warn("IPv6.ipv6_url is not set.  Cannot run IPv6 test.", "ipv6");
-				impl.complete = true;	// set to true so that is_complete doesn't
-							// block other plugins
+				impl.complete = true;  // set to true so that is_complete doesn't
+				                       // block other plugins
 				return this;
 			}
 

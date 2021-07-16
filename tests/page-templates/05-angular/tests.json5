@@ -1,0 +1,23 @@
+{
+    all: {
+        requires: ["spa", "history", "auto-xhr"]
+    },
+    "108-iframe-wait-for-spa": {
+        requires: ["iframe-delay"]
+    },
+    "109-multiple-iframes": {
+        requires: ["iframe-delay"]
+    },
+    "111-iframe-delay-with-child-spa-routes": {
+        requires: ["iframe-delay"]
+    },
+    "29-route-change-early-beacon": {
+        requires: ["early"]
+    },
+    "124-continuity": {
+        requires: ["continuity"]
+    },
+    "125-continuity-no-tti-first-beacon": {
+        requires: ["continuity"]
+    }
+}

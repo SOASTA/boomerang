@@ -4,6 +4,12 @@
 describe("BOOMR.plugins.mq", function() {
 	var assert = chai.assert;
 
+	beforeEach(function() {
+		if (!BOOMR.window || !BOOMR.window.BOOMR_mq) {
+			return this.skip();
+		}
+	});
+
 	describe("exports", function() {
 		it("Should have a BOOMR_mq object", function() {
 			assert.isObject(BOOMR.window.BOOMR_mq);

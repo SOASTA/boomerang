@@ -15,13 +15,15 @@
 <script>
 // force some beacons to be sent right before the spa_hard beacon would send
 BOOMR = window.BOOMR || {};
+window.timestamp = new Date().getTime();
 BOOMR.xhr = {
 	stop: function(callback) {
 		callback({
 			timing: {
-				startTime: 1,
-				requestStart: 5,
-				responseEnd: 10
+				requestStart: window.timestamp + 5,
+				responseStart: window.timestamp + 8,
+				responseEnd: window.timestamp + 10,
+				loadEventEnd: window.timestamp + 11
 			},
 			url: "http://foo.com/xhr/"
 		});

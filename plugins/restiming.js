@@ -907,16 +907,20 @@
 		for (i = 0; i < entries.length; i++) {
 			e = entries[i];
 
+			if (typeof e.name !== "string") {
+				continue;
+			}
+
 			// skip non-resource URLs
 			if (e.name.indexOf("http:") !== 0 &&
 			    e.name.indexOf("https:") !== 0) {
 				continue;
 			}
 
-			// skip boomerang.js and config URLs
-			if (e.name.indexOf(BOOMR.url) > -1 ||
-			    e.name.indexOf(BOOMR.config_url) > -1 ||
-			    (typeof BOOMR.getBeaconURL === "function" && BOOMR.getBeaconURL() && e.name.indexOf(BOOMR.getBeaconURL()) > -1)) {
+			// skip beacon URLs
+			if (typeof BOOMR.getBeaconURL === "function" &&
+			    BOOMR.getBeaconURL() &&
+			    e.name.indexOf(BOOMR.getBeaconURL()) > -1) {
 				continue;
 			}
 
@@ -1214,7 +1218,7 @@
 					}).length;
 			},
 			0
-		);
+			);
 	}
 
 	/**
@@ -1812,7 +1816,12 @@
 		sentNavBeacon: false,
 		initialized: false,
 		supported: null,
-		xhr_load: function() {
+		xhr_load: function(data) {
+			if (data && data.restiming) {
+				// put RT data on beacon
+				addToBeacon(data.restiming);
+			}
+
 			if (this.complete) {
 				return;
 			}

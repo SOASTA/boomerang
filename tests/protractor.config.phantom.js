@@ -15,7 +15,7 @@ exports.config = {
 			consolidate: true,
 			consolidateAll: true,
 			useDotNotation: true,
-			filePrefix: "e2e"
+			filePrefix: "e2e" + (process.env.BUILD_FLAVOR ? ("-" + process.env.BUILD_FLAVOR) : "")
 		}));
 	}
 };

@@ -14,6 +14,9 @@ if (window.Element && window.Element.prototype) {
 BOOMR_test.init({
 	testAfterOnBeacon: 2,
 	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	onBoomerangLoaded: function() {
 		// start an XHR so we get MutationObserver listening
 		var xhr = new XMLHttpRequest();

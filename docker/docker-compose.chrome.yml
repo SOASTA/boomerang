@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+  chrome:
+    image: selenium/node-chrome
+    environment:
+      - HUB_PORT_4444_TCP_ADDR=selenium-hub
+      - HUB_PORT_4444_TCP_PORT=4444
+      - SCREEN_WIDTH=1024
+      - SCREEN_HEIGHT=768
+      #- START_XVFB=false  # headless chrome crashes when this is false
+    volumes:
+      - /dev/shm:/dev/shm  # See https://github.com/SeleniumHQ/docker-selenium & https://code.google.com/p/chromium/issues/detail?id=519952
+    # ports:
+    #   - 5900:5900
+    depends_on:
+      - selenium-hub
+    networks:
+      - boomerang

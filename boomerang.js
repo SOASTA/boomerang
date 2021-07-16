@@ -77,6 +77,9 @@ if ("performance" in window &&
  * @global
  * @type {TimeStamp}
  * @desc
+ * This variable is added to the global scope (`window`) until Boomerang loads,
+ * at which point it is removed.
+ *
  * Timestamp the boomerang.js script started executing.
  *
  * This has to be global so that we don't wait for this entire
@@ -90,6 +93,8 @@ BOOMR_start = new Date().getTime();
  * @function
  * @global
  * @desc
+ * This function is added to the global scope (`window`).
+ *
  * Check the value of `document.domain` and fix it if incorrect.
  *
  * This function is run at the top of boomerang, and then whenever
@@ -357,8 +362,8 @@ BOOMR_check_doc_domain();
 
 	// visibilitychange is useful to detect if the page loaded through prerender
 	// or if the page never became visible
-	// http://www.w3.org/TR/2011/WD-page-visibility-20110602/
-	// http://www.nczonline.net/blog/2011/08/09/introduction-to-the-page-visibility-api/
+	// https://www.w3.org/TR/2011/WD-page-visibility-20110602/
+	// https://www.nczonline.net/blog/2011/08/09/introduction-to-the-page-visibility-api/
 	// https://developer.mozilla.org/en-US/docs/Web/Guide/User_experience/Using_the_Page_Visibility_API
 
 	// Set the name of the hidden property and the change event for visibility
@@ -1123,7 +1128,7 @@ BOOMR_check_doc_domain();
 			/**
 			 * Maximum GET URL length.
 			 * Using 2000 here as a de facto maximum URL length based on:
- 			 * http://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers
+ 			 * https://stackoverflow.com/questions/417142/what-is-the-maximum-length-of-a-url-in-different-browsers
 			 *
 			 * @type {number}
 			 *
@@ -3414,7 +3419,7 @@ BOOMR_check_doc_domain();
 
 					if (e_name === "page_unload") {
 						// pagehide is for iOS devices
-						// see http://www.webkit.org/blog/516/webkit-page-cache-ii-the-unload-event/
+						// see https://www.webkit.org/blog/516/webkit-page-cache-ii-the-unload-event/
 						if (w.onpagehide || w.onpagehide === null) {
 							BOOMR.utils.addListener(w, "pagehide", unload_handler);
 						}
@@ -4005,6 +4010,10 @@ BOOMR_check_doc_domain();
 					}
 					if (!this.plugins[k].is_complete(impl.vars)) {
 						BOOMR.debug("Plugin " + k + " is not complete, deferring beacon send");
+						// if an Early beacon is blocked, then we'll cancel it.
+						// By removing the `early` param, the beacon params will be merged
+						// with the following load beacon.
+						delete impl.vars.early;
 						return false;
 					}
 				}
@@ -4058,7 +4067,14 @@ BOOMR_check_doc_domain();
 			if (BOOMR.session.enabled) {
 				impl.vars["rt.si"] = BOOMR.session.ID + "-" + Math.round(BOOMR.session.start / 1000).toString(36);
 				impl.vars["rt.ss"] = BOOMR.session.start;
-				impl.vars["rt.sl"] = BOOMR.session.length;
+
+				if (typeof impl.vars.early === "undefined") {
+					// make sure Session Length is always at least 1 for non-Early beacons
+					impl.vars["rt.sl"] = BOOMR.session.length >= 1 ? BOOMR.session.length : 1;
+				}
+				else {
+					impl.vars["rt.sl"] = BOOMR.session.length;
+				}
 			}
 			else {
 				BOOMR.removeVar("rt.si", "rt.ss", "rt.sl");
@@ -4464,6 +4480,9 @@ BOOMR_check_doc_domain();
 	 * @type {TimeStamp}
 	 * @name BOOMR_lstart
 	 * @desc
+	 * This variable is added to the global scope (`window`) until Boomerang loads,
+	 * at which point it is removed.
+	 *
 	 * Time the loader script started fetching boomerang.js (if the asynchronous
 	 * loader snippet is used).
 	 */
@@ -4483,6 +4502,8 @@ BOOMR_check_doc_domain();
 	}
 
 	/**
+	 * This variable is added to the global scope (`window`).
+	 *
 	 * Time the `window.onload` event fired (if using the asynchronous loader snippet).
 	 *
 	 * This timestamp is logged in the case boomerang.js loads after the onload event

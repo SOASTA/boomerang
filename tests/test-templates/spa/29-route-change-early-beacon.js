@@ -67,8 +67,9 @@ BOOMR_test.templates.SPA["29-route-change-early-beacon"] = function() {
 	describe("Beacon 1 (spa_hard early)", function() {
 		var i = 0;
 
-		it("Should pass early beacon validation", function() {
-			t.validateEarlyBeacon(tf.beacons[i], tf.beacons[i + 1]);
+		it("Should be an early beacon", function() {
+			var b = tf.beacons[i];
+			assert.isDefined(b.early);
 		});
 
 		// the following tests are only executed if mPulse's PageParams plugin exists
@@ -300,8 +301,9 @@ BOOMR_test.templates.SPA["29-route-change-early-beacon"] = function() {
 	describe("Beacon 3 (spa early)", function() {
 		var i = 2;
 
-		it("Should pass early beacon validation", function() {
-			t.validateEarlyBeacon(tf.beacons[i], tf.beacons[i + 1]);
+		it("Should be an early beacon", function() {
+			var b = tf.beacons[i];
+			assert.isDefined(b.early);
 		});
 
 		// the following tests are only executed if mPulse's PageParams plugin exists
@@ -511,8 +513,9 @@ BOOMR_test.templates.SPA["29-route-change-early-beacon"] = function() {
 	describe("Beacon 5 (spa early)", function() {
 		var i = 4;
 
-		it("Should pass early beacon validation", function() {
-			t.validateEarlyBeacon(tf.beacons[i], tf.beacons[i + 1]);
+		it("Should be an early beacon", function() {
+			var b = tf.beacons[i];
+			assert.isDefined(b.early);
 		});
 
 		// the following tests are only executed if mPulse's PageParams plugin exists

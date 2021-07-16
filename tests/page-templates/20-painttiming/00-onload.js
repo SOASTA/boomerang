@@ -49,7 +49,10 @@ describe("e2e/20-painttiming/00-onload", function() {
 		// validation of First Contentful Paint
 		assert.isNumber(tf.lastBeacon()["pt.fcp"]);
 		assert.operator(parseInt(tf.lastBeacon()["pt.fcp"], 10), ">=", 0);
-		assert.operator(parseInt(tf.lastBeacon()["pt.fcp"], 10), ">=", parseInt(tf.lastBeacon()["pt.fp"], 10));
+		if (tf.lastBeacon()["pt.fp"]) {
+			// FF has fcp but no fp
+			assert.operator(parseInt(tf.lastBeacon()["pt.fcp"], 10), ">=", parseInt(tf.lastBeacon()["pt.fp"], 10));
+		}
 		assert.equal(tf.lastBeacon()["pt.fcp"], Math.floor(pt.startTime));
 	});
 });

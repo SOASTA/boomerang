@@ -26,6 +26,9 @@ if (!XMLHttpRequest.prototype.requestWrapped) {
 BOOMR_test.init({
 	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 3 : 1,
 	instrument_xhr: true,
+	AutoXHR: {
+		xhrRequireChanges: false
+	},
 	afterFirstBeacon: function() {
 		if (!BOOMR.plugins.AutoXHR) {
 			return;

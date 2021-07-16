@@ -1,0 +1,60 @@
+<%= header %>
+<!--
+	Tests early beacon interaction with spa_hard + spa.missed=1
+	xhr monitoring disabled
+-->
+<!-- Fires onload before config came in -->
+<script>
+window.BOOMR_LOGN_always = true;
+window.BOOMR_API_key = "22-early-14-spa-missed-xhr-on&delay=5000";
+
+// Force navigation to TYPE_NAVIGATE
+if (window.performance) {
+	window.performance.__defineGetter__("navigation", function() {
+		return {type: 0, redirectCount: 0};
+	});
+}
+</script>
+<%= boomerangScript %>
+
+<img id="main-image" src="" />
+<script src="14-spa-missed-xhr-on.js" type="text/javascript"></script>
+<script>
+var t = BOOMR_test;
+
+BOOMR_test.init({
+	testAfterOnBeacon: BOOMR.plugins.AutoXHR ? 4 : 1
+});
+
+function resources() {
+	var xhr0 = new XMLHttpRequest();
+	xhr0.open("GET", "/delay?id=xhr&delay=500&file=/pages/04-page-params/support/img.jpg&rnd=" + Math.random());
+	xhr0.send(null);
+
+	var img = document.getElementById("main-image");
+	img.src = "/delay?id=mo&delay=200&file=/pages/04-page-params/support/img.jpg&rnd=" + Math.random();
+}
+
+BOOMR.subscribe("spa_init", function(ename, data) {
+	// send some resources for spa monitoring to detect
+	setTimeout(resources, 10);
+});
+
+var beaconCount = 0;
+BOOMR.subscribe("onbeacon", function(vars) {
+	if (!BOOMR.plugins.AutoXHR) {
+		return;
+	}
+
+	beaconCount++;
+	if (beaconCount === 2) {
+		setTimeout(BOOMR.plugins.SPA.route_change, 500);
+	}
+});
+
+// Timeout after 30s in case a we don't reach our desired beacon count
+window.timerid = setTimeout(function() {
+	BOOMR_test.runTests();
+}, 30000);
+</script>
+<%= footer %>

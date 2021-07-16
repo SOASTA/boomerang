@@ -112,6 +112,7 @@
 	    firstSpaNav = true,
 	    routeFilter = false,
 	    routeChangeWaitFilter = false,
+	    routeChangeWaitFilterHardNavs = false,
 	    disableHardNav = false,
 	    supported = [],
 	    latestResource,
@@ -152,7 +153,8 @@
 		 * @param {BOOMR.plugins.AutoXHR.Resource} resource Resource
 		 */
 		spaHardMissedOnComplete: function(resource) {
-			var p, navigationStart = (BOOMR.plugins.RT && BOOMR.plugins.RT.navigationStart());
+			var p, navigationStart = (BOOMR.plugins.RT && BOOMR.plugins.RT.navigationStart()),
+			    ev, mh = BOOMR.plugins.AutoXHR.getMutationHandler();
 
 			waitingOnHardMissedComplete = false;
 
@@ -167,11 +169,18 @@
 			// always use the start time of navigationStart
 			resource.timing.requestStart = navigationStart;
 
-			if (resource.resources.length === 0) {
-				// No other resources were fetched, so set the end time
-				// to NavigationTiming's performance.loadEventEnd if available (instead of 'now')
+			ev = mh.pending_events[resource.index];
+			if (!ev || ev.total_nodes === 0) {
+				// No other resources (xhrs or mutations) were detected, so set the end time
+				// to NavigationTiming's page loadEventEnd if available (instead of 'now')
 				p = BOOMR.getPerformance();
-				if (p && p.timing && p.timing.navigationStart && p.timing.loadEventEnd) {
+
+				if (p &&
+				    p.timing &&
+				    p.timing.navigationStart &&
+				    p.timing.loadEventEnd &&
+				    // loadEventEnd may have been set by a wait filter
+				    typeof resource.timing.loadEventEnd === "undefined") {
 					resource.timing.loadEventEnd = p.timing.loadEventEnd;
 				}
 			}
@@ -197,8 +206,9 @@
 		 *
 		 * @memberof BOOMR.plugins.SPA
 		 */
-		is_complete: function() {
-			return !waitingOnHardMissedComplete;
+		is_complete: function(vars) {
+			// allow error and early beacons to go through even if we're not complete
+			return !waitingOnHardMissedComplete || (vars && (vars["http.initiator"] === "error" || typeof vars.early !== "undefined"));
 		},
 
 		/**
@@ -320,6 +330,7 @@
 		 * @param {object} [options] Additional options
 		 * @param {BOOMR.plugins.SPA.spaRouteFilter} [options.routeFilter] Route filter
 		 * @param {BOOMR.plugins.SPA.spaRouteChangeWaitFilter} [options.routeChangeWaitFilter] Route change wait filter
+		 * @param {boolean} [options.routeChangeWaitFilterHardNavs] Whether to apply wait filter on hard navs
 		 * @param {boolean} [options.disableHardNav] Disable sending SPA hard beacons
 		 *
 		 * @returns {@link BOOMR.plugins.SPA} The SPA plugin for chaining
@@ -338,6 +349,10 @@
 
 			if (typeof options.routeChangeWaitFilter === "function") {
 				routeChangeWaitFilter = options.routeChangeWaitFilter;
+			}
+
+			if (typeof options.routeChangeWaitFilterHardNavs === "boolean") {
+				routeChangeWaitFilterHardNavs = options.routeChangeWaitFilterHardNavs;
 			}
 
 			if (options.disableHardNav) {
@@ -442,7 +457,7 @@
 
 			// if we have a routeChangeWaitFilter, make sure AutoXHR waits on the custom event
 			// for this SPA soft route
-			if (initiator === "spa" && routeChangeWaitFilter) {
+			if ((initiator === "spa" || routeChangeWaitFilterHardNavs) && routeChangeWaitFilter) {
 				debugLog("Running route change wait filter");
 				try {
 					if (routeChangeWaitFilter.apply(null, arguments)) {

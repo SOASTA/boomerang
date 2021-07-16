@@ -6,6 +6,7 @@
 // In this test case, we're verifying that if responseEnd is after loadEventStart, we
 // don't send a negative t_page (Front End) timestamp.
 //
+window.timestamp = new Date().getTime();
 BOOMR_test.init({
 	testAfterOnBeacon: 2,
 	onBoomerangLoaded: function() {
@@ -13,10 +14,10 @@ BOOMR_test.init({
 			BOOMR.responseEnd({
 				url: "http://foo.com",
 				timing: {
-					loadEventEnd: 1000,
+					loadEventEnd: window.timestamp + 1000,
 					// Note for XHRs (which this is faking), we use responseEnd as responseStart in
 					// our calculation, so set it to be "after" loadEventEnd to trigger this condition
-					responseEnd: 2000
+					responseEnd: window.timestamp + 2000
 				}
 			});
 		}, 1000);
